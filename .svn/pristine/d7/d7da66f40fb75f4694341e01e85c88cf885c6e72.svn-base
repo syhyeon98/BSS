@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.family.dao.FamilyDAO">
+
+<insert id="insertFamily" parameterType="kr.or.ddit.family.vo.FamilyVO">
+    <selectKey order="BEFORE" keyProperty="empCd" resultType="string">
+        SELECT emp_cd 
+        FROM EMPLOYEE 
+        WHERE EMP_CD = (SELECT TO_CHAR(SYSDATE, 'YYMM') || LPAD(TO_NUMBER(MAX(SUBSTR(emp_cd, 5))), 3, '0') FROM EMPLOYEE)
+    </selectKey>
+    insert into family
+    (emp_cd, fam_no, fam_name, fam_job, fam_bir, fam_edu
+    , fam_note, fam_classify, code)
+    values
+    (
+    #{empCd, jdbcType=VARCHAR}
+    , fam_seq.nextval
+    , #{famName, jdbcType=VARCHAR}
+    , #{famJob, jdbcType=VARCHAR}
+    , #{famBir, jdbcType=VARCHAR}
+    , #{famEdu, jdbcType=VARCHAR}
+    , #{famNote, jdbcType=CLOB}
+    , #{famClassify, jdbcType=VARCHAR}
+    , #{code, jdbcType=VARCHAR}
+    )
+</insert>
+
+	<insert id="upInsertFamily" parameterType="kr.or.ddit.family.vo.FamilyVO">
+		 insert into family
+	    (emp_cd, fam_no, fam_name, fam_job, fam_bir, fam_edu
+	    , fam_note, fam_classify, code)
+	    values
+	    (
+	    #{empCd, jdbcType=VARCHAR}
+	    , fam_seq.nextval
+	    , #{famName, jdbcType=VARCHAR}
+	    , #{famJob, jdbcType=VARCHAR}
+	    , #{famBir, jdbcType=VARCHAR}
+	    , #{famEdu, jdbcType=VARCHAR}
+	    , #{famNote, jdbcType=CLOB}
+	    , #{famClassify, jdbcType=VARCHAR}
+	    , #{code, jdbcType=VARCHAR}
+	    )
+	</insert>
+	
+	
+	<select id="selectFamily" resultType="kr.or.ddit.family.vo.FamilyVO">
+		select fam_no, fam_name, fam_job, fam_bir, fam_edu, fam_note, fam_classify, state_nm
+		from family f left outer join state s on (f.code = s.code)
+		where emp_cd = #{empCd}
+	</select>
+	
+	<select id="selectFam" resultType="kr.or.ddit.family.vo.FamilyVO" parameterType="string">
+		select fam_no, fam_name, fam_job, fam_bir, fam_edu
+			, fam_note, fam_classify, f.code, state_nm
+        from family f left outer join state s on(f.code = s.code)
+        where fam_no = #{famNo,jdbcType=VARCHAR}
+	</select>
+	
+	<update id="updateFamily" parameterType="kr.or.ddit.family.vo.FamilyVO">
+		update family
+		set 
+		fam_name = #{famName,jdbcType=VARCHAR}
+		, fam_job = #{famJob,jdbcType=VARCHAR}
+		, fam_note = #{famNote,jdbcType=CLOB}
+		, code = #{code,jdbcType=VARCHAR}
+		where fam_no = #{famNo}		
+	</update>
+	
+
+	
+</mapper>

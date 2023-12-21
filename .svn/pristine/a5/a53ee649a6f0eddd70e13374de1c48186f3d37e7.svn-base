@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.messenger.dao.ChatReadDAO">
+	<insert id="insertRead" parameterType="kr.or.ddit.messenger.vo.ChatReadVO">
+		INSERT INTO CHAT_READ(
+		RECODE_NO
+		, RECODE_READ
+		, RECORE_EMP
+		, RECORE_ROOMNO
+		) VALUES(
+		#{recodeNo,jdbcType=NUMERIC}
+		, 0
+		, #{recoreEmp,jdbcType=VARCHAR}
+		, #{recoreRoomno,jdbcType=NUMERIC}
+		)
+	</insert>
+	
+	<select id="getNoRead" parameterType="kr.or.ddit.messenger.vo.ChatRecordVO">
+		SELECT COUNT(*) 
+		FROM CHAT_READ
+		WHERE RECORE_ROOMNO = #{recoreRoomno}
+		AND RECORE_EMP = #{recoreEmp}
+		AND RECODE_READ = 0
+	</select>
+	
+	<update id="changeSelectRead" parameterType="kr.or.ddit.messenger.vo.ChatReadVO">
+		UPDATE CHAT_READ
+		SET RECODE_READ = 1
+		WHERE RECORE_ROOMNO=#{recoreRoomno} 
+	</update>
+</mapper>

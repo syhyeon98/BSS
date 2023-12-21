@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.salary.dao.DdcHistoryDAO">
+
+  <resultMap type="kr.or.ddit.salary.vo.DdcHistoryVO" id="ddcHistory" autoMapping="true" >
+		<id property="empCd" column="EMP_CD" />
+		<id property="salNo" column="SAL_NO" />
+		<id property="ddcCd" column="DDC_CD" />
+		<association property="ddcVO" javaType="kr.or.ddit.salary.vo.DdcVO" autoMapping="true" />
+	</resultMap>
+
+	<select id="selectDdcHistoryList" resultMap="ddcHistory" parameterType="kr.or.ddit.salary.vo.DdcHistoryVO">
+		SELECT *
+		FROM DDC_HISTORY
+		INNER JOIN DDC USING(DDC_CD)
+		WHERE SAL_NO = #{salNo} and EMP_CD=#{empCd}
+	</select>
+	
+	<insert id="insertDdcHistory">
+		INSERT INTO DDC_HISTORY (DDC_CD, EMP_CD, SAL_NO,DDC_AMT)
+		SELECT DDC_CD, EMP_CD ,TO_CHAR(SYSDATE,'YYYYMM'),(PO_SAL*DDC_CRTR) FROM(
+		SELECT EMP_NAME, EMP_CD ,PO_SAL
+		FROM EMPLOYEE INNER JOIN POSITION USING(PO_CD)), DDC
+	</insert>
+	
+	<delete id="deleteDdcHistory" parameterType="kr.or.ddit.salary.vo.SalaryVO">
+		DELETE DDC_HISTORY
+		WHERE SAL_NO=#{salNo}
+	</delete>
+	
+</mapper>

@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.vocation.dao.VocationDAO">
+	
+	<!-- 총 페이지 수 조회  -->
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) FROM EMPLOYEE E
+		INNER JOIN VOCATION VO ON (E.EMP_CD = VO.EMP_CD)
+		<trim prefix="where" prefixOverrides="AND">
+			<if test="detailConditionVO != null">
+				<if test="detailConditionVO.empCd != null and !detailConditionVO.empCd.isEmpty()">
+					AND E.EMP_CD = #{detailConditionVO.empCd, jdbcType=VARCHAR}
+				</if>
+	
+				<if test="detailConditionVO.empName != null and !detailConditionVO.empName.isEmpty()">
+					AND E.EMP_NAME = #{detailConditionVO.empName, jdbcType=VARCHAR}
+				</if>
+			</if>
+		</trim> 
+	</select>
+	
+	<!-- 연가 전체 조회 페이징  -->
+	<select id="selectVocationPageList" resultType="kr.or.ddit.vocation.vo.VocationVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*, D.DEP_NAME
+			FROM(
+				SELECT ROWNUM RNUM, A.*
+			FROM
+			(
+	            SELECT
+					E.EMP_CD
+	                , VOCATION_CODE
+	                , TO_NUMBER(SUBSTR(VOCATION_CODE, INSTR(VOCATION_CODE, '-', 1, 2) + 1)) AS VOCATION_NUMBER
+	                , VOCATION_SDAY
+	                , VOCATION_EDAY
+	                , VOCATION_ADDDATE
+	                , EMP_NAME
+	                , E.DEP_CD
+				FROM EMPLOYEE E
+				INNER JOIN VOCATION VO ON (E.EMP_CD = VO.EMP_CD)
+				<trim prefix="where" prefixOverrides="AND">
+				<if test="detailConditionVO != null">
+					<if test="detailConditionVO.empCd != null and !detailConditionVO.empCd.isEmpty()" >
+				        AND E.EMP_CD = #{detailConditionVO.empCd, jdbcType=VARCHAR}
+				    </if>
+				    
+				    <if test="detailConditionVO.empName != null and !detailConditionVO.empName.isEmpty()">
+				        AND E.EMP_NAME = #{detailConditionVO.empName, jdbcType=VARCHAR}
+				    </if>
+
+				    <if test="detailConditionVO.vocationSday != null">
+				        AND VO.VOCATION_SDAY = #{detailConditionVO.vocationSday, jdbcType=DATE}
+				    </if>
+
+				    <if test="detailConditionVO.vocationEday != null">
+				        OR VO.VOCATION_EDAY = #{detailConditionVO.vocationEday, jdbcType=DATE}
+				    </if>
+				    
+				    <if test="detailConditionVO.vocationSday != null and detailConditionVO.vocationEday != null">
+					    OR VO.VOCATION_SDAY BETWEEN #{detailConditionVO.vocationSday, jdbcType=DATE}
+					    AND #{detailConditionVO.vocationEday, jdbcType=DATE}
+					</if>
+				</if>
+			    </trim> 
+				)A
+			)B
+			INNER JOIN DEPARTMENT D ON (B.DEP_CD = D.DEP_CD)
+				<![CDATA[
+					WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+				]]>
+				ORDER BY VOCATION_NUMBER DESC
+	</select>
+	
+	<!-- 연가 직원 선택 조회(모달)  -->
+	<select id="selectOneVocation" resultType="kr.or.ddit.vocation.vo.VocationVO" parameterType="string">
+			WITH VACATIONVIEW AS (
+			    SELECT
+			        E.EMP_CD
+			        , E.DEP_CD
+	                , VOCATION_CODE
+	                , TRUNC((VOCATION_EDAY - VOCATION_SDAY + 1)) AS VOCATION_USE
+	                , VOCATION_NO
+	                , VOCATION_SDAY
+	                , VOCATION_EDAY
+	                , VOCATION_ADDDATE
+	                , ENP_START
+	                , EMP_NAME
+	                
+			        <![CDATA[
+			        , CASE
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 12 THEN 11
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 12 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 24 THEN 12
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 24 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 36 THEN 14
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 36 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 48 THEN 15
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 48 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 60 THEN 17
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 60 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 72 THEN 20
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 72 THEN 21
+			        END AS VOCATION_ALL
+			        ]]>
+			
+			    FROM EMPLOYEE E
+			    	INNER JOIN VOCATION V ON(E.EMP_CD = V.EMP_CD)
+			)
+			SELECT
+			    VV.EMP_CD AS EMP_CD
+			    , VV.DEP_CD
+			    , D.DEP_NAME
+                , VV.EMP_NAME
+                , VV.VOCATION_CODE
+                , VV.VOCATION_ALL
+			    , VV.VOCATION_USE
+			    , VV.VOCATION_ALL - SUM(VV.VOCATION_USE) OVER (ORDER BY VV.VOCATION_ADDDATE DESC) AS VOCATION_USEABLE
+                , VV.VOCATION_ADDDATE
+			    , VV.VOCATION_SDAY
+			    , VV.VOCATION_EDAY
+			FROM VACATIONVIEW VV
+				INNER JOIN DEPARTMENT D ON (VV.DEP_CD = D.DEP_CD)
+				
+			WHERE VV.EMP_CD = #{empCd, jdbcType=VARCHAR}
+			ORDER BY VOCATION_USEABLE ASC
+	</select>
+	
+	<!-- 연가 등록  -->
+	<insert id="insertVocation" parameterType="kr.or.ddit.vocation.vo.VocationVO">
+		INSERT INTO VOCATION
+		(
+			VOCATION_NO
+			, VOCATION_CODE
+			, EMP_CD
+			, VOCATION_SDAY
+			, VOCATION_EDAY
+			, VOCATION_ADDDATE
+		) VALUES
+		(
+			VOCA_SEQ.NEXTVAL
+			, TO_CHAR(SYSDATE, 'YYYY') || '-연가-' || VOCA_SEQ.NEXTVAL
+			, #{empCd, jdbcType=VARCHAR}
+			, #{vocationSday, jdbcType=DATE}
+			, #{vocationEday, jdbcType=DATE}
+			, SYSDATE
+		)
+	</insert>
+	
+	<!-- 연가 수정 -->
+	<update id="updateVocation" parameterType="kr.or.ddit.vocation.vo.VocationVO">
+		UPDATE VOCATION
+			SET VOCATION_SDAY = #{vocationSday, jdbcType=DATE}
+				, VOCATION_EDAY = #{vocationEday, jdbcType=DATE}
+		WHERE VOCATION_CODE = #{vocationCode, jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 연가 삭제  -->
+	<delete id="deleteVocation" parameterType="java.util.List">
+	    DELETE FROM VOCATION
+	    WHERE VOCATION_CODE IN
+	    <foreach collection="list" item="vocationCodes" open="(" separator="," close=")">
+	        #{vocationCodes}
+	    </foreach>
+	</delete>
+	
+	<!-- [마이페이지] 연가 전체조회 속성값 총 갯수  -->
+	<select id="mySelectTotalRecord" resultType="long"  parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) FROM EMPLOYEE E
+		INNER JOIN VOCATION VO ON (E.EMP_CD = VO.EMP_CD)
+        WHERE E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	</select>
+	
+	<!-- [마이페이지] 연가 전체조회 1명  -->
+	<select id="mySelectVocationPageList" resultType="kr.or.ddit.vocation.vo.VocationVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		WITH VACATIONVIEW AS (
+			    SELECT E.EMP_CD
+			        , E.DEP_CD
+	                , VOCATION_CODE
+	                , TRUNC((VOCATION_EDAY - VOCATION_SDAY + 1)) AS VOCATION_USE
+	                , VOCATION_NO
+	                , VOCATION_SDAY
+	                , VOCATION_EDAY
+	                , VOCATION_ADDDATE
+	                , ENP_START
+	                , EMP_NAME
+			        <![CDATA[
+			        , CASE
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 12 THEN 11
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 12 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 24 THEN 12
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 24 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 36 THEN 14
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 36 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 48 THEN 15
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 48 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 60 THEN 17
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 60 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 72 THEN 20
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 72 THEN 21
+			        END AS VOCATION_ALL
+			        ]]>
+			
+			    FROM EMPLOYEE E
+			    	INNER JOIN VOCATION V ON(E.EMP_CD = V.EMP_CD)
+				
+			) SELECT ROWNUM AS RNUM , VV.*
+			  FROM (
+				SELECT 
+			    VV.EMP_CD AS EMP_CD
+			    , VV.DEP_CD
+			    , D.DEP_NAME
+                , VV.EMP_NAME
+                , VV.VOCATION_CODE
+                , VV.VOCATION_ALL
+			    , VV.VOCATION_USE
+			    , VV.VOCATION_ALL - SUM(VV.VOCATION_USE) OVER (ORDER BY VV.VOCATION_ADDDATE ASC) AS VOCATION_USEABLE
+                , VV.VOCATION_ADDDATE
+			    , VV.VOCATION_SDAY
+			    , VV.VOCATION_EDAY
+			FROM VACATIONVIEW VV
+				INNER JOIN DEPARTMENT D ON (VV.DEP_CD = D.DEP_CD)
+				WHERE VV.EMP_CD = #{empCd, jdbcType=VARCHAR} AND EXTRACT(YEAR FROM VV.VOCATION_SDAY) = EXTRACT(YEAR FROM SYSDATE)
+			) VV
+			ORDER BY RNUM ASC
+	</select>
+	
+	
+	<!-- [마이페이지] 연가 1명 연가코드 1개로 조회 -->
+	<select id="mySelectOneVocation" parameterType="kr.or.ddit.vocation.vo.VocationVO" resultType="kr.or.ddit.vocation.vo.VocationVO">
+		WITH VACATIONVIEW AS (
+			    SELECT
+			        E.EMP_CD
+			        , E.DEP_CD
+	                , VOCATION_CODE
+	                , TRUNC((VOCATION_EDAY - VOCATION_SDAY + 1)) AS VOCATION_USE
+	                , VOCATION_NO
+	                , VOCATION_SDAY
+	                , VOCATION_EDAY
+	                , VOCATION_ADDDATE
+	                , ENP_START
+	                , EMP_NAME
+	                
+			        <![CDATA[
+			        , CASE
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 12 THEN 11
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 12 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 24 THEN 12
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 24 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 36 THEN 14
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 36 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 48 THEN 15
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 48 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 60 THEN 17
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 60 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 72 THEN 20
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 72 THEN 21
+			        END AS VOCATION_ALL
+			        ]]>
+			
+			    FROM EMPLOYEE E
+			    	INNER JOIN VOCATION V ON(E.EMP_CD = V.EMP_CD)
+			)
+			SELECT
+				ROWNUM RNUM			
+			    , VV.EMP_CD AS EMP_CD
+			    , VV.DEP_CD
+			    , D.DEP_NAME
+                , VV.EMP_NAME
+                , VV.VOCATION_CODE
+                , VV.VOCATION_ALL
+			    , VV.VOCATION_USE
+			    , VV.VOCATION_ALL - SUM(VV.VOCATION_USE) OVER (ORDER BY VV.VOCATION_ADDDATE DESC) AS VOCATION_USEABLE
+                , VV.VOCATION_ADDDATE
+			    , VV.VOCATION_SDAY
+			    , VV.VOCATION_EDAY
+			FROM VACATIONVIEW VV
+				INNER JOIN DEPARTMENT D ON (VV.DEP_CD = D.DEP_CD)
+				
+			WHERE VV.EMP_CD = #{empCd, jdbcType=VARCHAR} 
+					AND VV.VOCATION_CODE = #{vocationCode, jdbcType=VARCHAR}
+			ORDER BY VOCATION_USEABLE ASC
+	</select>
+	
+	
+	<!-- [마이페이지] 총 연가 -->
+	<select id="totalMonthVocation" resultType="Integer" parameterType="String">
+		WITH VACATIONVIEW AS (
+			SELECT
+				ROWNUM AS RNUM
+				, E.EMP_CD
+				, E.DEP_CD
+				, VOCATION_CODE
+				, TRUNC((VOCATION_EDAY - VOCATION_SDAY + 1)) AS VOCATION_USE
+				, VOCATION_NO
+				, VOCATION_SDAY
+				, VOCATION_EDAY
+				, VOCATION_ADDDATE
+				, ENP_START
+				, EMP_NAME
+				, COALESCE(
+				<![CDATA[
+	            CASE
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 12 THEN 11
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 12 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 24 THEN 12
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 24 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 36 THEN 14
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 36 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 48 THEN 15
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 48 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 60 THEN 17
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 60 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 72 THEN 20
+	                WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 72 THEN 21
+	                ELSE 0
+	            END,  ]]>
+	            0
+				        ) AS VOCATION_ALL
+				    FROM EMPLOYEE E
+				    INNER JOIN VOCATION V ON (E.EMP_CD = V.EMP_CD)
+				)
+				SELECT VOCATION_ALL
+				FROM (
+				    SELECT VOCATION_ALL
+				    FROM VACATIONVIEW VV
+				    INNER JOIN DEPARTMENT D ON (VV.DEP_CD = D.DEP_CD)
+				    WHERE VV.EMP_CD = #{empCd, jdbcType=VARCHAR} AND EXTRACT(YEAR FROM VV.VOCATION_SDAY) = EXTRACT(YEAR FROM SYSDATE)
+				    ORDER BY VOCATION_ADDDATE DESC
+				)
+				WHERE ROWNUM = 1
+	</select>
+	
+	<!-- [마이페이지] 남은연가 조회  -->
+	<select id="restVocation" resultType="Integer" parameterType="String">
+		WITH VACATIONVIEW AS (
+				SELECT
+					ROWNUM AS RNUM
+					, E.EMP_CD
+					, E.DEP_CD
+					, VOCATION_CODE
+					, TRUNC((VOCATION_EDAY - VOCATION_SDAY + 1)) AS VOCATION_USE
+					, VOCATION_NO
+					, VOCATION_SDAY
+					, VOCATION_EDAY
+					, VOCATION_ADDDATE
+					, ENP_START
+					, EMP_NAME
+		 <![CDATA[
+			 , CASE
+				 WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 12 THEN 11
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 12 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 24 THEN 12
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 24 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 36 THEN 14
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 36 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 48 THEN 15
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 48 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 60 THEN 17
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 60 AND MONTHS_BETWEEN(SYSDATE, E.ENP_START) < 72 THEN 20
+			            WHEN MONTHS_BETWEEN(SYSDATE, E.ENP_START) >= 72 THEN 21
+				END AS VOCATION_ALL
+		  ]]>
+		FROM EMPLOYEE E
+			INNER JOIN VOCATION V ON ( E.EMP_CD = V.EMP_CD )
+		)
+		SELECT
+			VOCATION_USEABLE
+		FROM (
+			SELECT
+				VOCATION_ALL - SUM(TRUNC((VOCATION_EDAY - VOCATION_SDAY + 1))) OVER(ORDER BY VOCATION_ADDDATE ASC) AS VOCATION_USEABLE
+				, ROW_NUMBER() OVER (ORDER BY VOCATION_ADDDATE DESC) AS RN
+			FROM VACATIONVIEW VV
+				INNER JOIN DEPARTMENT D ON (VV.DEP_CD = D.DEP_CD)
+			WHERE VV.EMP_CD = #{empCd, jdbcType=VARCHAR}
+		) WHERE RN = 1
+	</select>
+</mapper>

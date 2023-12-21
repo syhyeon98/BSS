@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.edApproval.dao.SignpathDAO">
+
+	<!-- 내가가진 총 결재선 수 -->
+	<select id="selectTotalSignpath" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM SIGNPATH
+		WHERE EMP_CD=#{detailCondition.empCd}	
+		AND USE='Y'
+	</select>
+	
+	<!-- 내가 가진 결재선 리스트 -->
+	<select id="selectSignpathList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.edApproval.vo.SignpathVO">
+	
+		SELECT B.* 
+		FROM(
+		    SELECT ROWNUM RNUM, A.*
+		    FROM(
+		        SELECT
+		            SIGNPATH_NO
+		          , EMP_CD
+		          , SIGNPATH_NM
+		        FROM
+		            SIGNPATH
+		        WHERE EMP_CD=#{detailCondition.empCd}
+		        AND USE='Y'
+		        ORDER BY SIGNPATH_NO DESC
+		        )A
+		    )B
+	    <![CDATA[
+			WHERE RNUM>=#{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<!-- 결재선상세 -->
+	<select id="selectSignpathDetailList" parameterType="kr.or.ddit.edApproval.vo.SignpathDetailVO" resultType="kr.or.ddit.edApproval.vo.SignpathDetailVO">
+		SELECT
+		    SD.EMP_CD
+		  , SD.SIGNPATH_NO
+		  , EMP_CD2
+		  , SD_TURN
+		  , CODE_METHOD
+		  , EMP.EMP_NAME
+		  , PO.PO_NAME
+		FROM
+		    SIGNPATH_DETAIL SD
+		INNER JOIN
+		    EMPLOYEE EMP ON (SD.EMP_CD = EMP.EMP_CD)
+		INNER JOIN 
+		    POSITION PO ON (EMP.PO_CD = PO.PO_CD)
+		WHERE EMP_CD2 = #{empCd}		
+	</select>
+	
+	<!-- 결재선 삭제 -->
+	<update id="deleteSignPath" parameterType="kr.or.ddit.edApproval.vo.SignpathVO">
+		UPDATE SIGNPATH
+		SET USE ='N'
+		WHERE SIGNPATH_NO = #{signpathNo}
+	</update>
+	
+	<!-- 결재도장 -->
+	<insert id="insertSignImg" parameterType="kr.or.ddit.edApproval.vo.SignImgVO">
+		INSERT INTO SIGN_IMG (
+		      EMP_CD
+		    , ATCH_NO
+		) VALUES (
+		     #{empCd}
+		    ,#{atchNo}
+		)
+	</insert>
+	
+	<!-- 내 결재도장 가져오기 -->
+	<select id="selectSignImg" resultType="kr.or.ddit.edApproval.vo.SignImgVO">
+		 SELECT
+		    EMP_CD
+		  , ATCH_NO
+		FROM
+		    SIGN_IMG
+		WHERE EMP_CD =#{empCd}
+			AND USE='Y'
+	</select>
+	
+	<!-- 결재도장 해당하는 첨부파일 -->		
+	<select id="selectAtchFile" resultType="kr.or.ddit.atch.vo.AtchFileDetailVO" parameterType="kr.or.ddit.atch.vo.AtchFileVO">
+		SELECT * FROM OUT_ATCH
+		LEFT OUTER JOIN ATCH USING(ATCH_NO)
+		WHERE ATCH_NO = #{atchNo}
+	</select>
+	
+	<!-- 결재도장 use 변경 -->
+	<update id="updateSignpathImg" parameterType="kr.or.ddit.edApproval.vo.SignImgVO">
+		UPDATE SIGN_IMG
+		SET USE ='N'
+		WHERE EMP_CD = #{empCd}
+	</update>
+	
+	<!-- 읽음 처리 -->
+	<update id="updateSignpathEmpRead" parameterType="kr.or.ddit.edApproval.vo.SignpathEmpVO">
+        UPDATE SIGNPATH_EMP 
+        SET DOC_READ = 'Y'
+        WHERE EMP_CD=#{empCd} -- 로그인한직원
+            AND DOC_NO=#{docNo}
+	</update>
+</mapper>

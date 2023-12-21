@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.training.dao.TrainingDAO">
+	
+	
+	<!-- 페이징을 위해 레코드 수 조회  -->
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) FROM TRAINING
+	</select>
+	
+	<!-- 교육 전체조회 화면  -->
+	<select id="selectTrainList" resultType="kr.or.ddit.training.vo.TrainingVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT * 
+		FROM (
+		    SELECT B.*, C.ApplyCount, ROW_NUMBER() OVER (ORDER BY TRAIN_PERIOD DESC) AS RNUM
+		    FROM (
+		        SELECT 
+		            TRAIN_NO
+		            , LECTOR_ID
+		            , TRAIN_PLACE
+		            , TRAIN_TIME
+		            , TRAIN_DATE
+		            , TRAIN_TARGET
+		            , TRAIN_NAME
+		            , TRAIN_CONTENT
+		            , TRAIN_PERIOD
+		            , TRAIN_SIGN
+		            , CAPACITY
+		        FROM TRAINING
+		    ) B 
+		    LEFT JOIN (
+		        SELECT
+		            TRAIN_NO,
+		            COUNT(*) AS applyCount
+		        FROM TRALINING_APPLICATION
+		        GROUP BY TRAIN_NO
+		    ) C ON (B.TRAIN_NO = C.TRAIN_NO)
+		    ORDER BY TRAIN_PERIOD DESC
+		)
+		<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<!-- 교육 상세조회 화면  -->
+	<select id="selectTrain" resultType="kr.or.ddit.training.vo.TrainingVO" parameterType="int">
+		SELECT T.TRAIN_NO
+			  , T.LECTOR_ID
+			  , L.LECTOR_NAME
+			  , T.TRAIN_DATE
+			  , T.TRAIN_PLACE
+			  , T.TRAIN_TIME
+			  , T.TRAIN_TARGET
+			  , T.CAPACITY
+			  , T.TRAIN_NAME
+			  ,	T.TRAIN_CONTENT
+			  , T.TRAIN_PERIOD
+			  , T.TRAIN_SIGN
+			  ,	T.CODE
+		FROM TRAINING T
+			LEFT OUTER JOIN LECTOR L ON(T.LECTOR_ID = L.LECTOR_ID)
+		WHERE TRAIN_NO = #{trainNo, jdbcType=NUMERIC}
+	</select>
+	
+	<!-- 교육 등록  -->
+	<insert id="insertTraining" parameterType="kr.or.ddit.training.vo.TrainingVO">
+		<selectKey order="BEFORE" keyProperty="trainNo" resultType="int">
+			SELECT TRAIN_SEQ.NEXTVAL AS trainNo FROM DUAL
+		</selectKey>
+		INSERT INTO TRAINING(
+						TRAIN_NO
+						, LECTOR_ID
+						, TRAIN_PLACE
+						, TRAIN_TIME
+						, TRAIN_TARGET
+						, CAPACITY
+						, TRAIN_NAME
+						, TRAIN_CONTENT
+						, TRAIN_PERIOD
+						, TRAIN_SIGN
+						, TRAIN_DATE)
+		VALUES(
+				TRAIN_SEQ.NEXTVAL
+				, (SELECT LECTOR_ID FROM LECTOR WHERE LECTOR_ID = #{lectorId,jdbcType=VARCHAR})
+				, #{trainPlace,jdbcType=VARCHAR}
+				, #{trainTime,jdbcType=NUMERIC}
+				, #{trainTarget,jdbcType=VARCHAR}
+				, #{capacity,jdbcType=NUMERIC}
+				, #{trainName,jdbcType=VARCHAR}
+				, #{trainContent,jdbcType=CLOB}
+				, #{trainPeriod,jdbcType=DATE}
+				, #{trainSign,jdbcType=VARCHAR}
+				, #{trainDate,jdbcType=DATE}
+		)
+	</insert>
+	
+	<!-- 교육 삭제  -->
+	<delete id="deleteTraining" parameterType="kr.or.ddit.training.vo.TrainingVO">
+		DELETE FROM TRAINING WHERE TRAIN_NO = #{trainNo, jdbcType=NUMERIC}
+	</delete>
+	
+	<!-- 교육 수정할 때 1개만 선택조회 모달에 뜨는 내용  -->
+	<select id="selectOneTrain" parameterType="int" resultType="kr.or.ddit.training.vo.TrainingVO">
+		SELECT T.TRAIN_NO
+			  , T.LECTOR_ID
+			  , L.LECTOR_NAME
+			  , T.TRAIN_DATE
+			  , T.TRAIN_PLACE
+			  , T.TRAIN_TIME
+			  , T.TRAIN_TARGET
+			  , T.TRAIN_NAME
+			  ,	T.TRAIN_CONTENT
+			  , T.TRAIN_PERIOD
+			  , T.TRAIN_SIGN
+			  ,	T.CODE
+			  , T.CAPACITY
+		FROM TRAINING T
+			LEFT OUTER JOIN LECTOR L ON(T.LECTOR_ID = L.LECTOR_ID)
+		WHERE TRAIN_NO = #{trainNo, jdbcType=NUMERIC}
+	</select>
+	
+	<!-- 교육 수정 -->
+	<update id="updateTraining" parameterType="kr.or.ddit.training.vo.TrainingVO">
+	UPDATE TRAINING
+		SET
+			TRAIN_PLACE = #{trainPlace, jdbcType=VARCHAR}
+			, TRAIN_TIME = #{trainTime,jdbcType=NUMERIC}
+			, TRAIN_TARGET = #{trainTarget,jdbcType=VARCHAR}
+			, CAPACITY = #{capacity,jdbcType=NUMERIC}
+			, TRAIN_NAME = #{trainName,jdbcType=VARCHAR}
+			, TRAIN_CONTENT = #{trainContent,jdbcType=CLOB}
+			, TRAIN_PERIOD = #{trainPeriod,jdbcType=DATE}
+			, TRAIN_SIGN = #{trainSign,jdbcType=VARCHAR}
+			, TRAIN_DATE = #{trainDate,jdbcType=TIMESTAMP}
+	WHERE TRAIN_NO = #{trainNo, jdbcType=NUMERIC}
+	</update>
+	
+	<!-- 강사 조회 -->
+	<select id="selectLector" resultType="kr.or.ddit.training.vo.LectorVO" >
+		SELECT LECTOR_ID
+				, LECTOR_NAME
+				, LECTOR_RECORD
+				, LECTOR_PH
+				, LECTOR_MAIL
+		FROM LECTOR
+        WHERE LECTOR_ID = #{lectorId,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 강사 상세조회  -->
+	<select id="selectLectorDetail" resultType="kr.or.ddit.training.vo.LectorVO" parameterType="string">
+		SELECT
+			    L.LECTOR_ID,
+			    L.LECTOR_NAME,
+			    L.LECTOR_RECORD,
+			    L.LECTOR_PH,
+			    L.LECTOR_MAIL
+		FROM LECTOR L
+			 INNER JOIN TRAINING T ON (L.LECTOR_ID = T.LECTOR_ID)
+		WHERE L.LECTOR_ID =  #{lectorId,jdbcType=VARCHAR} AND ROWNUM = 1
+	</select>
+	
+	
+	<!-- <option>에서 강사명 전체조회 -->
+	<select id="selectLectorAll" resultType="kr.or.ddit.training.vo.LectorVO" >
+		SELECT LECTOR_ID
+				, LECTOR_NAME
+				, LECTOR_RECORD
+				, LECTOR_PH
+				, LECTOR_MAIL
+		FROM LECTOR
+	</select>
+	
+</mapper>

@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.edDocument.dao.DocumentPagingDAO">
+
+	<!-- 요청함 총 갯수 -->
+	<select id="selectTotalReqDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT
+		 COUNT(*)
+		FROM
+		    DOCUMENT DOC
+		WHERE DOC.EMP_CD =#{detailCondition.empCd}
+		    AND DOC.CODE='D_01' -- 결재 요청
+	</select>
+	
+	<!-- 요청함 페이징 -->
+	 <select id="selectReqDocumentList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+			
+			SELECT A.*
+			FROM(
+			    SELECT  ROWNUM RNUM, B.*
+			    FROM(
+			         SELECT
+			            DOC.DOC_NO
+			          , DOC.EMP_CD
+			          , DOC.SIGNPATH_NO
+			          , DOC.DT_NO
+			          , DOC.DOC_TITLE
+			          , DOC.DOC_CONTENT
+			          , DOC.DOC_TYPE
+			          , DOC.DOC_UPDATEDATE
+			          , DOC.DOC_SIGN
+			          , DOC.CODE
+			          , DOC.ATCH_NO
+			          , SE.EMP_CD APPROVALEMPCD -- 현재 결재자
+			          , SE.SE_DATE
+			          , SE.SD_TURN
+			          , SE.CODE_METHOD
+			          , SE.SE_REJECT
+			          , SE.CODE_STATUS
+			          , EMP.EMP_NAME EMPNAME -- 기안자
+			          , APPROVALEMP.EMP_NAME APPROVALEMPNAME -- 결재자
+			          , DEP.DEP_NAME
+			        FROM
+			            DOCUMENT DOC
+			        INNER JOIN SIGNPATH_EMP SE
+			            ON(DOC.DOC_NO = SE.DOC_NO AND DOC.SIGNPATH_NO = SE.SIGNPATH_NO)
+			        INNER JOIN EMPLOYEE EMP
+			            ON(DOC.EMP_CD =EMP.EMP_CD)
+		            INNER JOIN DEPARTMENT DEP
+                        ON(EMP.DEP_CD = DEP.DEP_CD)
+			        INNER JOIN EMPLOYEE APPROVALEMP
+			            ON(SE.EMP_CD = APPROVALEMP.EMP_CD)
+			        WHERE DOC.EMP_CD =#{detailCondition.empCd} 
+			            AND DOC.CODE='D_01' -- 결재 요청
+			            AND SE.SE_DATE IS NULL
+			        ORDER BY TO_NUMBER(DOC.DOC_NO) DESC
+					) B
+				    WHERE  (SD_TURN,DOC_NO) IN (SELECT MIN(SD_TURN), DOC_NO FROM SIGNPATH_EMP WHERE SE_DATE IS NULL GROUP BY DOC_NO)
+				)A
+ 	      <![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+	 </select>
+
+	<!-- 결재진행함 총 갯수 -->
+	<select id="selectTotalIngDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+       SELECT 
+          count(*)
+       FROM DOCUMENT DOC
+       WHERE CODE = 'D_01' 
+            AND DOC.EMP_CD=#{detailCondition.empCd}  OR DOC.DOC_NO IN (SELECT DOC_NO FROM SIGNPATH_EMP WHERE EMP_CD=#{detailCondition.empCd} )
+	</select>
+	
+	<!-- 결재진행함 리스트 -->
+	<select id="selectIngDocumentList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+		SELECT A.*
+		FROM (
+		    SELECT ROWNUM RNUM, B.*
+		    FROM (
+		        SELECT 
+		            DOC.DOC_NO
+		          , DOC.EMP_CD
+		          , DOC.SIGNPATH_NO
+		          , DOC.DT_NO
+		          , DOC.DOC_TITLE
+		          , DOC.DOC_CONTENT
+		          , DOC.DOC_TYPE
+		          , DOC.DOC_UPDATEDATE
+		          , DOC.DOC_SIGN
+		          , DOC.CODE 
+		          , EMP.EMP_NAME  -- 기안자명
+		          , PO.PO_NAME    -- 기안자직급
+		          , DEP.DEP_NAME  -- 기안자부서
+		          , SEMP.EMP_CD  AS "APPROVAL_EMP_CD"  -- 현재결재자 코드
+		          , APPEMP.EMP_NAME AS "APPROVAL_EMP_NAME" -- 결재자 이름
+		          , APPPO.PO_NAME  AS "APPROVAL_PO_NAME"-- 결재자 직급
+		          , APPDEP.DEP_NAME  AS "APPROVAL_DEP_NAME"-- 결재자 부서
+		        FROM DOCUMENT DOC
+		        INNER JOIN EMPLOYEE EMP
+		            ON  (DOC.EMP_CD=EMP.EMP_CD)
+		        INNER JOIN POSITION PO
+		            ON(EMP.PO_CD = PO.PO_CD)
+		        INNER JOIN DEPARTMENT DEP
+		            ON(EMP.DEP_CD = DEP.DEP_CD)
+		        INNER JOIN(  SELECT *
+		                    FROM SIGNPATH_EMP SEMP
+		                    WHERE  (DOC_NO,SD_TURN) IN(
+		                    SELECT
+		                        DOC_NO,MIN(SD_TURN)
+		                    FROM
+		                        SIGNPATH_EMP WHERE CODE_STATUS ='SE_01'
+		                    GROUP BY DOC_NO
+		                        )) SEMP
+		        ON(SEMP.DOC_NO= DOC.DOC_NO)
+		        INNER JOIN EMPLOYEE APPEMP
+		        ON(SEMP.EMP_CD = APPEMP.EMP_CD)
+		        INNER JOIN POSITION APPPO
+		        ON(APPEMP.PO_CD = APPPO.PO_CD)
+		        INNER JOIN DEPARTMENT APPDEP
+		        ON(APPEMP.DEP_CD = APPDEP.DEP_CD)
+		        WHERE CODE = 'D_01' 
+		             AND DOC.EMP_CD=#{detailCondition.empCd}  OR DOC.DOC_NO IN (SELECT DOC_NO FROM SIGNPATH_EMP WHERE EMP_CD=#{detailCondition.empCd} )
+		        ORDER BY TO_NUMBER(DOC.DOC_NO) DESC
+		    )B
+		)A
+		 <![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+	</select>
+
+	<!-- 결재대기함 총 갯수 -->
+	<select id="selectTotalWaitDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+         SELECT
+            COUNT(*)
+        FROM
+            SIGNPATH_EMP SE
+        WHERE SE.EMP_CD = #{detailCondition.empCd}
+            AND SE.SE_DATE IS NULL 
+            AND SE.CODE_STATUS = 'SE_01' 
+        ORDER BY SE.DOC_NO DESC
+	</select>
+
+	<!-- 결재 대기함 리스트  -->
+	<select id="selectWaitDocumentList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+		SELECT A.*
+		FROM(
+		    SELECT ROWNUM RNUM, B.*
+		    FROM(
+		         SELECT
+		              DOC.DOC_NO
+		            , DOC.DOC_TYPE
+		            , DOC.DOC_TITLE
+		            , DOC.EMP_CD EMPCD -- 기안자 사번
+		            , EMP.EMP_NAME EMPNAME --기안자 이름
+		            , EMP.DEP_CD    -- 기안자 부서
+		            , DEP.DEP_NAME   -- 기안자 부서명
+		            , DOC.DOC_UPDATEDATE
+		            , SE.EMP_CD APPROVALEMPCD -- 결재자 사번
+		            , SE.SD_TURN
+		            ,APPEMP.EMP_NAME APPROVALEMPNAME --결재자
+		            ,SE.DOC_READ -- 읽음(Y/N)
+		        FROM
+		            SIGNPATH_EMP SE
+		        INNER JOIN DOCUMENT DOC
+		        ON (SE.DOC_NO = DOC.DOC_NO)
+		        INNER JOIN EMPLOYEE EMP
+		        ON(DOC.EMP_CD = EMP.EMP_CD)
+		        INNER JOIN EMPLOYEE APPEMP
+		        ON(SE.EMP_CD = APPEMP.EMP_CD)
+		        INNER JOIN DEPARTMENT DEP
+		        ON(EMP.DEP_CD = DEP.DEP_CD)
+		        WHERE SE.EMP_CD =#{detailCondition.empCd} 
+		            AND SE.SE_DATE IS NULL 
+		            AND SE.CODE_STATUS = 'SE_01' 
+		        ORDER BY TO_NUMBER(DOC.DOC_NO) DESC
+		    ) B
+		    WHERE (SD_TURN, DOC_NO) IN (SELECT MIN(SD_TURN), DOC_NO FROM SIGNPATH_EMP WHERE SE_DATE IS NULL GROUP BY DOC_NO)
+		)A
+		 <![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+	</select>
+	
+	<!-- 결재참조 총 갯수 -->
+	<select id="selectTotalRefDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM HELP_DETAIL
+		WHERE EMP_CD = #{detailCondition.empCd} 
+	</select>
+	
+	<!-- 결재참조 리스트 -->
+	<select id="selectRefDocumentList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+		SELECT A.* 
+		FROM(
+		    SELECT ROWNUM RNUM, B.*
+		    FROM(
+		        SELECT
+		            HD.DOC_NO
+		          , DOC.DOC_TYPE
+		          , DOC.DOC_TITLE
+		          , HD.EMP_CD
+		          , EMP.EMP_NAME
+		          , DEP.DEP_NAME
+		          , HD.HD_DATE
+		        FROM
+		            HELP_DETAIL HD
+		        INNER JOIN DOCUMENT DOC
+		            ON(HD.DOC_NO = DOC.DOC_NO)
+		        INNER JOIN EMPLOYEE EMP
+		            ON(DOC.EMP_CD = EMP.EMP_CD)
+		        INNER JOIN DEPARTMENT DEP
+		            ON(EMP.DEP_CD = DEP.DEP_CD)
+		        WHERE HD.EMP_CD=#{detailCondition.empCd} 
+		        ORDER BY TO_NUMBER(DOC.DOC_NO) DESC
+		    )B
+		)A	
+		 <![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+	</select>
+	
+	<!-- 반려 총 갯수 -->
+	 <select id="selectTotalReturnDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+	 	SELECT COUNT(*)
+		FROM DOCUMENT
+		WHERE EMP_CD=#{detailCondition.empCd} AND CODE='D_04'
+	 </select>
+	 
+	 <!-- 반려함 리스트 -->
+	 <select id="selectReturnDocumentList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+	 	SELECT A.* 
+		FROM(
+		    SELECT ROWNUM RNUM, B.*
+		    FROM(
+		        SELECT
+		            DOC.DOC_NO
+		          , DOC.CODE
+		          , DOC.DOC_TYPE
+		          , DOC.DOC_TITLE
+		          , DOC.EMP_CD EMPCD
+		          , EMP.EMP_NAME EMPNAME -- 기안자명
+		          , DOC.DOC_UPDATEDATE
+		          , SE.EMP_CD APPROVALEMPCD -- 결재자 코드
+		          , SE.SE_DATE
+		          , SE.SE_REJECT 
+		          , APPROVALEMP.EMP_NAME APPROVALEMPNAME --결재자명
+		        FROM
+		            DOCUMENT DOC
+		        INNER JOIN SIGNPATH_EMP SE
+		            ON(DOC.DOC_NO = SE.DOC_NO)
+		        INNER JOIN EMPLOYEE EMP
+		            ON(DOC.EMP_CD = EMP.EMP_CD)
+		        INNER JOIN EMPLOYEE APPROVALEMP
+		            ON(SE.EMP_CD = APPROVALEMP.EMP_CD)
+		        WHERE DOC.EMP_CD=#{detailCondition.empCd}
+		            AND DOC.CODE='D_04'
+		            AND SE.CODE_STATUS='SE_03'
+		        ORDER BY TO_NUMBER(DOC.DOC_NO) DESC
+		    )B
+		)A
+		 <![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+	 </select>
+	 
+	 <!-- 수신함총갯수 -->
+	 <select id="selectTotalRegDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+	 	SELECT COUNT(*)
+         FROM DEP_DOCUMENT
+        INNER JOIN DOCUMENT USING(DOC_NO)
+        WHERE DEP_CD =#{detailCondition.depCd} AND CODE='D_02'
+	 </select>
+	
+	<!-- 수신함 리스트 -->	
+	<select id="selectRegDocumentList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.department.vo.DepDocumentVO">
+		SELECT A.*
+		FROM(
+		    SELECT ROWNUM RNUM, B.*
+		    FROM(
+		        SELECT 
+		              DEPDOC.DOC_NO
+		            , DEPDOC.DEP_CD
+		            , DEPDOC.DEP_DOCUMENT_VIEWS
+		            , DOC.EMP_CD
+		            , DOC.SIGNPATH_NO
+		            , DOC.DT_NO
+		            , DOC.DOC_TITLE
+		            , DOC.DOC_CONTENT
+		            , DOC.DOC_TYPE
+		            , DOC.DOC_UPDATEDATE
+		            , DOC.DOC_SIGN
+		            , DOC.CODE
+		            , DOC.ATCH_NO
+		            , EMP.EMP_NAME
+		            , EMP.DEP_CD "DEP_CD2" -- 기안자 부서코드
+		            , EMP.PO_CD
+		            , DEP.DEP_NAME
+		            , PO.PO_NAME
+		        FROM DEP_DOCUMENT DEPDOC --수신함
+		        INNER JOIN DOCUMENT DOC
+		        ON(DEPDOC.DOC_NO = DOC.DOC_NO)
+		        INNER JOIN EMPLOYEE EMP --기안자
+		        ON(DOC.EMP_CD = EMP.EMP_CD)
+		        INNER JOIN DEPARTMENT DEP --기안자부서
+		        ON(EMP.DEP_CD = DEP.DEP_CD)
+		        INNER JOIN POSITION PO -- 기안자 직급
+		        ON (EMP.PO_CD = PO.PO_CD)
+		        WHERE DEPDOC.DEP_CD =#{detailCondition.depCd} -- 로그인한 사용자의 부서 코드에 따라서
+		        AND CODE='D_02'
+		        ORDER BY DOC_SIGN
+		    )B
+		)A
+	</select>
+	
+</mapper>

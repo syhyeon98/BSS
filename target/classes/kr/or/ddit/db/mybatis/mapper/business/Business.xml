@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.business.dao.BusinessDAO">
+	<select id="busList" resultType="kr.or.ddit.business.vo.BusinessVO">
+		select bus_cd, bus_name
+		from business
+	</select>
+
+	<insert id="insertBusiness" parameterType="kr.or.ddit.business.vo.BusinessVO">
+		insert into business
+		(bus_cd, bus_name)
+		values
+		( #{busCd,jdbcType=VARCHAR}
+		, #{busName,jdbcType=VARCHAR})
+	</insert>
+</mapper>

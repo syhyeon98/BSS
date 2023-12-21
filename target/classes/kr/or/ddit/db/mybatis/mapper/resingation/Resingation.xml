@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.resignation.dao.ResignationDAO">
+	
+		<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'empName'">
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'empCd'">
+						INSTR(EMP_CD, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(EMP_CD, #{simpleCondition.searchWord} ) > 0					
+						</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+	
+	
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM RESIGNATION R
+        LEFT OUTER JOIN EMPLOYEE E ON(R.EMP_CD = E.EMP_CD)
+		<include refid="searchFrag" />
+	</select>
+	
+	<select id="reEmployeeList"
+		resultType="kr.or.ddit.resignation.vo.ResignationVO"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		   SELECT B.*
+    FROM (
+        SELECT ROWNUM RNUM, A.*
+        FROM (
+            SELECT
+                E.EMP_CD
+                , EMP_NAME 
+                , E.DEP_CD
+                , E.PO_CD
+                , EMP_ID1
+                , EMP_MAIL
+                , DEP_NUM
+                , DEP_NAME
+                , PO_NAME
+                , RE_DATE
+                , RE_TREATMENT
+                , RE_GIVE
+                , RE_MONEY
+                , RE_CONT
+                , (
+                    SELECT STATE_NM
+                    FROM STATE S
+                    WHERE S.CODE = R.CODE
+                ) AS STATE_NM
+            FROM EMPLOYEE E
+            LEFT OUTER JOIN DEPARTMENT D ON (E.DEP_CD = D.DEP_CD)
+            LEFT OUTER JOIN RESIGNATION R ON (E.EMP_CD = R.EMP_CD)
+            LEFT OUTER JOIN POSITION PO ON (E.PO_CD = PO.PO_CD)
+            WHERE R.CODE = 'R_01'
+        ) A
+            <include refid="searchFrag" />
+    ) B
+		<![CDATA[
+ 		where rnum >= #{startRow} and rnum <= #{endRow} 
+ 		]]> 
+	</select>
+	
+	<select id="reEmployeeDetail" parameterType="string" resultType="ResignationVO">
+	
+	SELECT 
+	    EMP.EMP_CD, EMP_NAME, EMP_ID1, EMP_ID2, EMP_ADD, EMP_ADD1, EMP_ADD2
+	    , EMP_MARRY, EMP_MILITARY, EMP_RESIGNATION, ENP_START
+	    , EMP.DEP_CD, DEP_NAME, DEP_NUM
+	    , PO.PO_CD, PO_NAME
+	    , UNI_NAME, UNI_MAJOR, UNI_DEGREE, UNI_START, UNI_END, UNI.CODE "uni.code"
+	    , RE_DATE, RE.CODE AS RCODE, RE_TREATMENT
+	    , LICENSE_NM, LICENSE_DATE, LICENSE_AGENCY
+	    , CAR_NM, CAR_PO, CAR_DATE
+	    , BUS_NAME
+	    , STATE_NM
+	FROM EMPLOYEE EMP
+		LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_CD = DEP.DEP_CD)
+		LEFT OUTER JOIN POSITION PO ON(EMP.PO_CD = PO.PO_CD)
+		LEFT OUTER JOIN UNIVERSITY UNI ON(EMP.EMP_CD = UNI.EMP_CD)
+		LEFT OUTER JOIN RESIGNATION RE ON(EMP.EMP_CD = RE.EMP_CD)
+		LEFT OUTER JOIN LICENSE LI ON(EMP.EMP_CD = LI.EMP_CD)
+		LEFT OUTER JOIN CAREER CAR ON(EMP.EMP_CD = CAR.EMP_CD)
+		LEFT OUTER JOIN BUSINESS BUS ON(EMP.BUS_CD = BUS.BUS_CD)
+		LEFT OUTER JOIN STATE ST ON(UNI.CODE = ST.CODE)
+	WHERE EMP.EMP_CD = #{empCd}
+	
+	</select>
+	
+</mapper>

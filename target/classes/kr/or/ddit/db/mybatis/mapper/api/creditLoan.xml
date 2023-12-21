@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.finapi.dao.CreditLoanDAO">
+
+<sql id="searchFrag">
+		<where>
+			CRDT_LEND_RATE_TYPE='A'
+			<choose>
+				<when
+					test="detailCondition.topFinGrpNo neq null and not detailCondition.topFinGrpNo.isEmpty()">
+					AND	TOP_FIN_GRP_NO=#{detailCondition.topFinGrpNo}
+				</when>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.crdtLendRateType neq null and not detailCondition.crdtLendRateType.isEmpty()">
+					AND CL.CRDT_PRDT_TYPE=#{detailCondition.crdtLendRateType}
+				</when>
+			</choose>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'korCoNm'">
+						AND INSTR(KOR_CO_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'finPrdtNm'">
+						AND INSTR(FIN_PRDT_NM,#{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						AND (INSTR(KOR_CO_NM, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(FIN_PRDT_NM, #{simpleCondition.searchWord} ) > 0)
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+	
+	<select id="selectTotalRecord"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="long">
+		 SELECT COUNT(*)
+		FROM BANK B
+		INNER JOIN CREDIT_LOAN CL
+			ON(B.FIN_CO_NO=CL.FIN_CO_NO)
+		INNER JOIN CREDIT_LOAN_OPTION CLO
+			ON(CL.FIN_PRDT_CD = CLO.FIN_PRDT_CD AND CL.DCLS_MONTH = CLO.DCLS_MONTH AND CL.FIN_CO_NO = CLO.FIN_CO_NO AND CL.CRDT_PRDT_TYPE=CLO.CRDT_PRDT_TYPE)
+		<include refid="searchFrag" />
+	</select>
+	
+	<select id="selectCreditLoanList" parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="kr.or.ddit.finapi.vo.CreditLoanVO">
+	
+		 SELECT C.*
+	FROM (
+	    SELECT ROWNUM RNUM
+	           , A.FIN_CO_NO
+	           , A.KOR_CO_NM
+	           , A.DCLS_MONTH
+	           , A.DCLS_CHRG_MAN 
+	           , A.HOMP_URL 
+	           , A.CAL_TEL
+	           , A.FIN_PRDT_CD
+	           , A.CRDT_PRDT_TYPE
+	           , A.FIN_PRDT_NM
+	           , A.CRDT_PRDT_TYPE_NM
+	           , A.JOIN_WAY
+	           , A.DCLS_STRT_DAY
+	           , A.DCLS_END_DAY
+	           , A.FIN_CO_SUBM_DAY
+	           , A.TOP_FIN_GRP_NO
+	           , A.CB_NAME
+	           , A.CRDT_LEND_RATE_TYPE
+	           , A.CRDT_LEND_RATE_TYPE_NM
+	           , A.CRDT_GRAD_1
+	           , A.CRDT_GRAD_4
+	           , A.CRDT_GRAD_5
+	           , A.CRDT_GRAD_6
+	           , A.CRDT_GRAD_10
+	           , A.CRDT_GRAD_11
+	           , A.CRDT_GRAD_12
+	           , A.CRDT_GRAD_13
+	           , A.CRDT_GRAD_AVG
+	    FROM (
+	        SELECT B.FIN_CO_NO
+	               , B.KOR_CO_NM
+	               , B.DCLS_MONTH
+	               , B.DCLS_CHRG_MAN 
+	               , B.HOMP_URL 
+	               , B.CAL_TEL
+	               , CL.FIN_PRDT_CD
+	               , CL.CRDT_PRDT_TYPE
+	               , CL.FIN_PRDT_NM
+	               , CL.CRDT_PRDT_TYPE_NM
+	               , CL.JOIN_WAY
+	               , CL.DCLS_STRT_DAY
+	               , CL.DCLS_END_DAY
+	               , CL.FIN_CO_SUBM_DAY
+	               , CL.TOP_FIN_GRP_NO
+	               , CL.CB_NAME
+	               , CLO.CRDT_LEND_RATE_TYPE
+	               , CLO.CRDT_LEND_RATE_TYPE_NM
+	               , CLO.CRDT_GRAD_1
+	               , CLO.CRDT_GRAD_4
+	               , CLO.CRDT_GRAD_5
+	               , CLO.CRDT_GRAD_6
+	               , CLO.CRDT_GRAD_10
+	               , CLO.CRDT_GRAD_11
+	               , CLO.CRDT_GRAD_12
+	               , CLO.CRDT_GRAD_13
+	               , CLO.CRDT_GRAD_AVG
+	        FROM BANK B
+	        INNER JOIN CREDIT_LOAN CL ON (B.FIN_CO_NO = CL.FIN_CO_NO)
+	        INNER JOIN CREDIT_LOAN_OPTION CLO ON (CL.FIN_PRDT_CD = CLO.FIN_PRDT_CD AND CL.DCLS_MONTH = CLO.DCLS_MONTH AND CL.FIN_CO_NO = CLO.FIN_CO_NO AND CL.CRDT_PRDT_TYPE = CLO.CRDT_PRDT_TYPE)
+	        <include refid="searchFrag" />
+			ORDER BY TOP_FIN_GRP_NO ASC
+			) A
+			) C
+			<![CDATA[  
+				WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+			]]>
+			
+	</select>
+    <select id="selectAllCreditLoanList" resultType="kr.or.ddit.finapi.vo.CreditLoanVO">
+    	 SELECT ROWNUM RNUM
+	           , A.FIN_CO_NO
+	           , A.KOR_CO_NM
+	           , A.DCLS_MONTH
+	           , A.DCLS_CHRG_MAN 
+	           , A.HOMP_URL 
+	           , A.CAL_TEL
+	           , A.FIN_PRDT_CD
+	           , A.CRDT_PRDT_TYPE
+	           , A.FIN_PRDT_NM
+	           , A.CRDT_PRDT_TYPE_NM
+	           , A.JOIN_WAY
+	           , A.DCLS_STRT_DAY
+	           , A.DCLS_END_DAY
+	           , A.FIN_CO_SUBM_DAY
+	           , A.TOP_FIN_GRP_NO
+	           , A.CB_NAME
+	           , A.CRDT_LEND_RATE_TYPE
+	           , A.CRDT_LEND_RATE_TYPE_NM
+	           , A.CRDT_GRAD_1
+	           , A.CRDT_GRAD_4
+	           , A.CRDT_GRAD_5
+	           , A.CRDT_GRAD_6
+	           , A.CRDT_GRAD_10
+	           , A.CRDT_GRAD_11
+	           , A.CRDT_GRAD_12
+	           , A.CRDT_GRAD_13
+	           , A.CRDT_GRAD_AVG
+	    FROM (
+	        SELECT B.FIN_CO_NO
+	               , B.KOR_CO_NM
+	               , B.DCLS_MONTH
+	               , B.DCLS_CHRG_MAN 
+	               , B.HOMP_URL 
+	               , B.CAL_TEL
+	               , CL.FIN_PRDT_CD
+	               , CL.CRDT_PRDT_TYPE
+	               , CL.FIN_PRDT_NM
+	               , CL.CRDT_PRDT_TYPE_NM
+	               , CL.JOIN_WAY
+	               , CL.DCLS_STRT_DAY
+	               , CL.DCLS_END_DAY
+	               , CL.FIN_CO_SUBM_DAY
+	               , CL.TOP_FIN_GRP_NO
+	               , CL.CB_NAME
+	               , CLO.CRDT_LEND_RATE_TYPE
+	               , CLO.CRDT_LEND_RATE_TYPE_NM
+	               , CLO.CRDT_GRAD_1
+	               , CLO.CRDT_GRAD_4
+	               , CLO.CRDT_GRAD_5
+	               , CLO.CRDT_GRAD_6
+	               , CLO.CRDT_GRAD_10
+	               , CLO.CRDT_GRAD_11
+	               , CLO.CRDT_GRAD_12
+	               , CLO.CRDT_GRAD_13
+	               , CLO.CRDT_GRAD_AVG
+	        FROM BANK B
+	        INNER JOIN CREDIT_LOAN CL ON (B.FIN_CO_NO = CL.FIN_CO_NO)
+	        INNER JOIN CREDIT_LOAN_OPTION CLO ON (CL.FIN_PRDT_CD = CLO.FIN_PRDT_CD AND CL.DCLS_MONTH = CLO.DCLS_MONTH AND CL.FIN_CO_NO = CLO.FIN_CO_NO AND CL.CRDT_PRDT_TYPE = CLO.CRDT_PRDT_TYPE))A
+    </select>
+</mapper>

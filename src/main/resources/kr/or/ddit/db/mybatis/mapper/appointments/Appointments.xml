@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.appointments.dao.AppointmentsDAO">
+
+	<insert id="insertAppointments"
+		parameterType="kr.or.ddit.appointments.vo.AppointmentsVO">
+		insert into appointments
+		(app_no, emp_cd, app_emp, app_date, now_dep
+		, new_dep, new_po, app_cont)
+		values
+		(
+		#{appNo,jdbcType=NUMERIC}
+		, #{empCd,jdbcType=VARCHAR}
+		, #{appEmp,jdbcType=VARCHAR}
+		, #{appDate,jdbcType=DATE}
+		, #{nowDep,jdbcType=VARCHAR}
+		, #{newDep,jdbcType=VARCHAR}
+		, #{newPo,jdbcType=VARCHAR}
+		, #{appCont,jdbcType=CLOB}
+		)
+	</insert>
+</mapper>

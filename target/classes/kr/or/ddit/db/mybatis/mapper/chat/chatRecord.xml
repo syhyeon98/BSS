@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.messenger.dao.ChatRecordDAO">
+	<insert id="insertMsg" parameterType="kr.or.ddit.messenger.vo.ChatRecordVO">
+		INSERT INTO CHAT_RECORD(
+			RECODE_NO
+			, MESSENGER_CONTENT
+			, MESSENGER_TIME
+			, ROOM_NO
+			, EMP_CD
+			)VALUES(
+				#{recodeNo,jdbcType=VARCHAR}
+				, #{messengerContent,jdbcType=CLOB}
+				, #{messengerTime,jdbcType=DATE}
+				, #{roomNo,jdbcType=NUMERIC}
+				, #{empCd,jdbcType=VARCHAR}
+			)
+	</insert>
+
+	<resultMap type="kr.or.ddit.messenger.vo.ChatRecordVO" id="chatRecord">
+		<id property="messengerContent" column="MESSENGER_CONTENT" />
+		<result property="messengerTime" column="MESSENGER_TIME" />
+		<result property="empCd" column="EMP_CD" />
+		<result property="empName" column="EMP_NAME" />
+	</resultMap>
+	<select id="recieveChatRecord" resultMap="chatRecord">
+		SELECT
+		CHAT_RECORD.MESSENGER_CONTENT, CHAT_RECORD.MESSENGER_TIME
+		, CHAT_RECORD.EMP_CD, EMPLOYEE.EMP_NAME
+		FROM CHAT_RECORD
+		LEFT JOIN
+		EMPLOYEE
+		ON CHAT_RECORD.EMP_CD = EMPLOYEE.EMP_CD
+		WHERE
+		CHAT_RECORD.ROOM_NO=#{roomNo}
+		ORDER BY CHAT_RECORD.MESSENGER_TIME
+	</select>
+	<select id="recieveLastChat" resultType="string">
+		SELECT
+    	CR.MESSENGER_CONTENT,
+    	CR.MESSENGER_TIME,
+    	CR.EMP_CD,
+    	E.EMP_NAME
+		FROM CHAT_RECORD CR
+		LEFT JOIN EMPLOYEE E ON CR.EMP_CD = E.EMP_CD
+		WHERE CR.MESSENGER_TIME = (
+    	SELECT MAX(MESSENGER_TIME)
+    	FROM CHAT_RECORD
+    	WHERE ROOM_NO = #{roomNo}
+		)
+		AND CR.ROOM_NO = #{roomNo}
+	</select>
+</mapper>

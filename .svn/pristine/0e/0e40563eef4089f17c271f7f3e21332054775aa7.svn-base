@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.attendance.dao.OverTimeDAO">
+	
+	<!-- 초과근무 전체조회  -->
+	<select id="selectOverList" resultType="kr.or.ddit.attendance.vo.OverTimeVO">
+	WITH OVERVIEW AS (
+		SELECT O.ATTE_NO, O.OVER_START, O.OVER_END, O.OVER_END - O.OVER_START AS OVERALL, O.OVER_CONT, A.EMP_CD
+		FROM ATTENDANCE A
+		INNER JOIN OVERTIME O ON(A.ATTE_NO = O.ATTE_NO)
+	)
+	SELECT E.EMP_NAME, O.ATTE_NO, O.OVER_START, O.OVER_END, O.OVERALL, O.OVER_CONT, O.EMP_CD,
+		EXTRACT(HOUR FROM OVERALL) AS Time,
+		EXTRACT(MINUTE FROM OVERALL) AS Minute
+	FROM EMPLOYEE E
+	INNER JOIN OVERVIEW O ON(E.EMP_CD = O.EMP_CD)
+	</select>
+	
+	 <!-- 초과근무 등록 -->
+	<insert id="insertOverTime" parameterType="kr.or.ddit.attendance.vo.OverTimeVO">
+		INSERT INTO OVERTIME (
+		    ATTE_NO
+		   ,OVER_START
+		   ,OVER_END
+		   ,OVER_CONT
+		) VALUES (
+		    #{atteNo, jdbcType=NUMERIC}
+		    , #{overStart, jdbcType=TIMESTAMP}
+		    , #{overEnd, jdbcType=TIMESTAMP}
+		    , #{overCont, jdbcType=CLOB}
+		)
+	</insert>
+	
+	<!-- 초과근무 기간 조회 [overTimeSearch]  -->
+	<select id="overTimeSearch" resultType="kr.or.ddit.attendance.vo.OverTimeVO">
+		SELECT OVER_START
+			, OVER_END
+			, OVER_CONT
+			, (OVER_END - OVER_START) as OVERALL
+			, ATTE.ATTE_NO
+			, ATTE_STIME
+			, ATTE_END
+			, ATTE_DATE
+			, EMP_NAME
+			, EMP.EMP_CD
+			, EXTRACT(HOUR FROM (OVER_END - OVER_START)) AS Time
+			, EXTRACT(MINUTE FROM (OVER_END - OVER_START)) AS Minute
+		FROM OVERTIME OVER
+			LEFT OUTER JOIN ATTENDANCE ATTE ON(OVER.ATTE_NO = ATTE.ATTE_NO)
+			LEFT OUTER JOIN EMPLOYEE EMP ON(ATTE.EMP_CD = EMP.EMP_CD)
+		WHERE OVER_START BETWEEN #{overStart, jdbcType=TIMESTAMP} AND #{overEnd, jdbcType=TIMESTAMP}
+	</select>
+	
+	
+	<!-- 초과근무 수정 -->
+	<update id="updateOverTime" parameterType="kr.or.ddit.attendance.vo.OverTimeVO">
+		UPDATE OVERTIME
+			SET OVER_START = #{overStart, jdbcType=TIMESTAMP}
+				, OVER_END = #{overEnd, jdbcType=TIMESTAMP}
+				, OVER_CONT = #{overCont, jdbcType=CLOB}
+		WHERE ATTE_NO = #{atteNo, jdbcType=NUMERIC}
+	</update>
+	
+	<!--[마이페이지] 초과근무 전체 조회  -->
+	<select id="mypageSelectOverList" resultType="kr.or.ddit.attendance.vo.OverTimeVO" parameterType="kr.or.ddit.attendance.vo.OverTimeVO">
+		SELECT ROWNUM RNUM  
+			, OVER_START
+				, OVER_END
+				, OVER_CONT
+				, (OVER_END - OVER_START) as OVERALL
+				, ATTE.ATTE_NO
+				, ATTE_STIME
+				, ATTE_END
+				, ATTE_DATE
+				, EMP_NAME
+				, EMP.EMP_CD
+				, EXTRACT(HOUR FROM (OVER_END - OVER_START)) AS Time
+				, EXTRACT(MINUTE FROM (OVER_END - OVER_START)) AS Minute
+			FROM OVERTIME OVER
+				LEFT OUTER JOIN ATTENDANCE ATTE ON(OVER.ATTE_NO = ATTE.ATTE_NO)
+				LEFT OUTER JOIN EMPLOYEE EMP ON(ATTE.EMP_CD = EMP.EMP_CD)
+			WHERE OVER_START BETWEEN #{overStart, jdbcType=TIMESTAMP} AND #{overEnd, jdbcType=TIMESTAMP} AND EMP.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	</select>
+	
+	<!-- [마이페이지] 이 달의 초과근무 시간  -->
+	<select id="totalOvertime" parameterType="kr.or.ddit.attendance.vo.OverTimeVO" resultType="kr.or.ddit.attendance.vo.OverTimeVO" >
+		SELECT TOTALOVER.*
+ 		FROM
+			(SELECT
+			    EXTRACT(MONTH FROM ATTE_DATE) AS Month,
+			    EXTRACT(YEAR FROM ATTE_DATE) AS Year,
+			    SUM(EXTRACT(HOUR FROM (OVER_END - OVER_START))) AS totalHours,
+			    SUM(EXTRACT(MINUTE FROM (OVER_END - OVER_START))) AS totalMinutes
+			FROM
+			    OVERTIME OVER
+			    LEFT OUTER JOIN ATTENDANCE ATTE ON (OVER.ATTE_NO = ATTE.ATTE_NO)
+			    LEFT OUTER JOIN EMPLOYEE EMP ON (ATTE.EMP_CD = EMP.EMP_CD)
+			WHERE
+			    EMP.EMP_CD = #{empCd, jdbcType=VARCHAR}
+			    AND EXTRACT(YEAR FROM ATTE_DATE) = EXTRACT(YEAR FROM SYSDATE)
+			GROUP BY
+			    EXTRACT(MONTH FROM ATTE_DATE),
+			    EXTRACT(YEAR FROM ATTE_DATE)
+			ORDER BY
+			    Year, Month) TOTALOVER
+		WHERE TOTALOVER.MONTH = EXTRACT(MONTH FROM SYSDATE)
+	</select>
+</mapper>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.edDocument.dao.MyDocumentDAO">
+
+
+	<!-- 로그인한 사용자가 기안한 총 기안문 갯수 -->
+	<select id="selectTotalDocument"
+		parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+		SELECT COUNT(*)
+		FROM DOCUMENT
+		WHERE EMP_CD=#{empCd} AND
+		CODE!='D_03'
+	</select>
+
+	<!-- 로그인한 사용자의 기안문중 진행중인 기안문 갯수 -->
+	<select id="selectTotalDocumentD01"
+		parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+		SELECT COUNT(*)
+		FROM DOCUMENT
+		WHERE EMP_CD=#{empCd} AND
+		CODE='D_01'
+	</select>
+
+	<!-- 로그인한 사용자가 기안한 기안문 중 승인된 기안문 갯수 -->
+	<select id="selectTotalDocumentD02"
+		parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+		SELECT COUNT(*)
+		FROM DOCUMENT
+		WHERE EMP_CD=#{empCd} AND
+		CODE='D_02'
+	</select>
+
+	<!-- 로그인한 사용자가 기안한 기안문 중 반려된 기안문 갯수 -->
+	<select id="selectTotalDocumentD04"
+		parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+		SELECT COUNT(*)
+		FROM DOCUMENT
+		WHERE EMP_CD=#{empCd} AND
+		CODE='D_04'
+	</select>
+
+	
+	<select id="selectTotalConditionDocument" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM DOCUMENT
+		WHERE EMP_CD=#{detailCondition.empCd} AND CODE!='D_03'
+		<if test="detailCondition.code neq null and not detailCondition.code.isEmpty()">
+				AND CODE = #{detailCondition.code}
+		</if>
+	</select>
+	
+	<!-- 문서리스트 -->
+	<select id="selectDocumentList"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo"
+		resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+
+		SELECT B.*
+		FROM(
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+			  DOC.DOC_NO
+			, DOC.EMP_CD
+			, DOC.SIGNPATH_NO
+			, DOC.DT_NO
+			, DOC.DOC_TITLE
+			, DOC.DOC_CONTENT
+			, DOC.DOC_TYPE
+			, DOC.DOC_UPDATEDATE
+			, DOC.DOC_SIGN
+			, DOC.CODE
+			, DOC.ATCH_NO
+			, EMP.EMP_NAME
+	        , EMP.DEP_CD
+	        , DEP.DEP_NAME
+			FROM DOCUMENT DOC
+	        INNER JOIN EMPLOYEE EMP
+	        ON (DOC.EMP_CD = EMP.EMP_CD)
+	        INNER JOIN DEPARTMENT DEP
+	        ON(DEP.DEP_CD = EMP.DEP_CD)
+			WHERE DOC.EMP_CD=#{detailCondition.empCd} AND CODE!='D_03'
+			<if test="detailCondition.code neq null and not detailCondition.code.isEmpty()">
+				AND CODE = #{detailCondition.code}
+			</if>
+			ORDER BY TO_NUMBER(DOC_NO) DESC
+		)A
+		)B
+       <![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+
+	</select>
+
+	<select id="selectSignpathEmpList" resultType="kr.or.ddit.edApproval.vo.SignpathEmpVO">
+		SELECT
+			  SE.SIGNPATH_NO
+			, SE.EMP_CD
+			, SE.DOC_NO
+			, SE.SE_DATE
+			, SE.SD_TURN
+			, SE.CODE_METHOD
+			, SE.SE_REJECT
+			, SE.CODE_STATUS
+			, EMP.EMP_NAME
+			, PO.PO_NAME
+		FROM SIGNPATH_EMP SE
+		INNER JOIN EMPLOYEE EMP
+		ON (SE.EMP_CD = EMP.EMP_CD )
+		INNER JOIN POSITION PO
+		ON(EMP.PO_CD = PO.PO_CD)
+	</select>
+
+
+
+</mapper>

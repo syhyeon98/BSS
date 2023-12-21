@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.salary.dao.AllowHistoryDAO">
+
+	 <resultMap type="kr.or.ddit.salary.vo.AllowHistoryVO" id="allowHistory" autoMapping="true" >
+		<id property="empCd" column="EMP_CD" />
+		<id property="salNo" column="SAL_NO" />
+		<id property="allowCd" column="ALLOW_CD" />
+		<association property="allowVO" javaType="kr.or.ddit.salary.vo.AllowVO" autoMapping="true" />
+	</resultMap>
+
+<!-- 	<select id="selectAllowHistoryList" resultMap="allowHistory" parameterType="kr.or.ddit.salary.vo.DdcHistoryVO"> -->
+<!-- 		SELECT * -->
+<!-- 		FROM ALLOW_HISTORY -->
+<!-- 		INNER JOIN ALLOW USING(ALLOW_CD) -->
+<!-- 		WHERE SAL_NO = #{salNo} and EMP_CD=#{empCd} -->
+<!-- 	</select> -->
+	<select id="selectAllowHistoryList" resultMap="allowHistory" parameterType="kr.or.ddit.salary.vo.DdcHistoryVO">
+		WITH A AS(SELECT *
+		FROM ALLOW_HISTORY
+   		WHERE SAL_NO = #{salNo} and EMP_CD=#{empCd} )
+        SELECT * FROM A
+		RIGHT OUTER JOIN ALLOW USING(ALLOW_CD)  
+        WHERE (ALLOW_AMT IS NOT NULL OR ALLOW_USE='Y')
+        ORDER  BY SAL_NO,ALLOW_CD
+	</select>
+	
+	<insert id="insertBaseSalAllowHistory">
+		INSERT INTO ALLOW_HISTORY (ALLOW_CD, EMP_CD, SAL_NO,ALLOW_AMT)
+		SELECT '001',EMP_CD,TO_CHAR(SYSDATE,'YYYYMM'),PO_SAL
+		FROM EMPLOYEE INNER JOIN POSITION USING(PO_CD)
+	</insert>
+
+	<insert id="insertMealSalAllowHistory">
+		INSERT INTO ALLOW_HISTORY (ALLOW_CD, EMP_CD, SAL_NO,ALLOW_AMT)
+		SELECT '003',EMP_CD,TO_CHAR(SYSDATE,'YYYYMM'),200000
+		FROM EMPLOYEE
+	</insert>
+
+	<insert id="insertAddSalAllowHistory" parameterType="kr.or.ddit.salary.vo.AllowHistoryVO">
+		INSERT INTO ALLOW_HISTORY (ALLOW_CD, EMP_CD, SAL_NO,ALLOW_AMT)
+		SELECT #{allowCd},EMP_CD,#{salNo},(PO_SAL)*#{allowVO.allowCalc}
+		FROM EMPLOYEE INNER JOIN POSITION USING(PO_CD)
+		WHERE EMP_CD=#{empCd}
+	</insert>
+	
+	<!-- 기존 24~25일쿼리 -->
+<!-- 	<select id="countOverTime" resultType="int"> -->
+<!-- 		SELECT COUNT(*)  -->
+<!-- 		FROM OVERTIME -->
+<!-- 		WHERE OVER_START BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE,-1),'YYYY/MM')||'/'||25  -->
+<!-- 		AND SYSDATE+1  -->
+<!-- 	</select> -->
+	
+	<select id="countOverTime" resultType="int">
+		SELECT COUNT(*) 
+		FROM OVERTIME
+		WHERE OVER_START BETWEEN TRUNC(ADD_MONTHS(SYSDATE,-1), 'MM') AND ADD_MONTHS(LAST_DAY(SYSDATE),-1) 
+	</select>
+	
+	<insert id="insertOverSalAllowHistory">
+		INSERT INTO ALLOW_HISTORY (SAL_NO,EMP_CD,ALLOW_CD,ALLOW_AMT)
+		SELECT TO_CHAR(SYSDATE,'YYYYMM'),EMP_CD,'002',
+		SUM(ROUND((TO_DATE(TO_CHAR(OVER_END,'YYYY-MM-DD HH24:MI:SS'), 'YYYY-MM-DD HH24:MI:SS') - TO_DATE(TO_CHAR(OVER_START,'YYYY-MM-DD HH24:MI:SS'), 'YYYY-MM-DD HH24:MI:SS'))* 24 * 60, 2)/60)*10000 AS MM
+		FROM ATTENDANCE A
+		INNER JOIN (SELECT * FROM OVERTIME WHERE OVER_START 
+		BETWEEN TRUNC(ADD_MONTHS(SYSDATE,-1), 'MM') AND ADD_MONTHS(LAST_DAY(SYSDATE),-1) )O 
+		ON(A.ATTE_NO=O.ATTE_NO)
+		GROUP BY EMP_CD
+	</insert>
+	<!-- 기존 24~ 25 쿼리 -->
+<!-- 	<insert id="insertOverSalAllowHistory"> -->
+<!-- 		INSERT INTO ALLOW_HISTORY (SAL_NO,EMP_CD,ALLOW_CD,ALLOW_AMT) -->
+<!-- 		SELECT TO_CHAR(SYSDATE,'YYYYMM'),EMP_CD,'002', -->
+<!-- 		SUM(ROUND((TO_DATE(TO_CHAR(OVER_END,'YYYY-MM-DD HH24:MI:SS'), 'YYYY-MM-DD HH24:MI:SS') - TO_DATE(TO_CHAR(OVER_START,'YYYY-MM-DD HH24:MI:SS'), 'YYYY-MM-DD HH24:MI:SS'))* 24 * 60, 2)/60)*10000 AS MM -->
+<!-- 		FROM ATTENDANCE A -->
+<!-- 		INNER JOIN (SELECT * FROM OVERTIME WHERE OVER_START  -->
+<!-- 		BETWEEN TO_CHAR(ADD_MONTHS(SYSDATE,-1),'YYYY-MM')||'-25' AND SYSDATE+1 )O  -->
+<!-- 		ON(A.ATTE_NO=O.ATTE_NO) -->
+<!-- 		GROUP BY EMP_CD -->
+<!-- 	</insert> -->
+	
+	<delete id="deleteAllowHistory" parameterType="kr.or.ddit.salary.vo.SalaryVO">
+		DELETE ALLOW_HISTORY
+		WHERE SAL_NO=#{salNo}
+	</delete>
+	
+	<delete id="deleteOneAllowHistory" parameterType="kr.or.ddit.salary.vo.AllowHistoryVO">
+		DELETE ALLOW_HISTORY
+		WHERE SAL_NO=#{salNo} and EMP_CD=#{empCd} and ALLOW_CD=#{allowCd}
+	</delete>
+	
+</mapper>

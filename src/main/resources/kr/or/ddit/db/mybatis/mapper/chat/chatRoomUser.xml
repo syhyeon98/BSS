@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.messenger.dao.ChatRoomUserDAO">
+	<select id="empCnt" resultType="int">
+		SELECT COUNT(*) AS COUNT_EMP
+		FROM CHAT_USER
+		WHERE ROOM_NO = #{roomNO}
+		AND EMP_CD IN (SELECT EMP_CD FROM CHAT_USER WHERE ROOM_NO = #{roomNO})
+	</select>
+	
+	<insert id="insertMe" parameterType="kr.or.ddit.messenger.vo.ChatRoomVO">
+		INSERT INTO CHAT_USER(
+			ROOM_NO
+			, EMP_CD
+		) VALUES (
+			#{roomNo,jdbcType=NUMERIC}
+			, #{empCd}		
+		)
+	</insert>
+	
+	<insert id="insertEmps" parameterType="kr.or.ddit.messenger.vo.ChatUserVO">
+		INSERT INTO CHAT_USER(
+			ROOM_NO
+			, EMP_CD
+		) VALUES (
+			#{roomNo,jdbcType=NUMERIC}
+			, #{empCd}		
+		)
+	</insert>
+	
+	<select id="getUser" resultType="kr.or.ddit.messenger.vo.ChatUserVO">
+		SELECT 
+		ROOM_NO, EMP_CD
+		FROM CHAT_USER
+		WHERE ROOM_NO = #{roomNO}
+	</select>
+	
+	<select id="selectEmpCds" resultType="string">
+		SELECT EMP_CD
+		FROM CHAT_USER
+		WHERE ROOM_NO=#{roomNo}
+		AND EMP_CD=#{empCd}
+	</select>
+</mapper>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.messenger.dao.ChatRoomDAO">
+<!-- 	<sql id="searchFrag"> -->
+<!-- 		<if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()"> -->
+<!-- 				<choose> -->
+<!-- 					<when test="simpleCondition.searchType eq 'title'"> -->
+<!-- 						AND INSTR(RECEIVE_MAIL_TITLE, #{simpleCondition.searchWord}) > 0 -->
+<!-- 					</when> -->
+<!-- 					<when test="simpleCondition.searchType eq 'sender'"> -->
+<!-- 						AND INSTR(RECEIVE_MAIL_SENDER, #{simpleCondition.searchWord}) > 0 -->
+<!-- 					</when> -->
+<!-- 					<when test="simpleCondition.searchType eq 'receiver'"> -->
+<!-- 						AND INSTR(RECEIVE_MAIL_RECEIVER, #{simpleCondition.searchWord}) > 0 -->
+<!-- 					</when> -->
+<!-- 					<otherwise> -->
+<!-- 						AND -->
+<!-- 						INSTR(RECEIVE_MAIL_TITLE, #{simpleCondition.searchWord}) > 0 -->
+<!-- 						OR -->
+<!-- 						INSTR(RECEIVE_MAIL_SENDER, #{simpleCondition.searchWord}) > 0 -->
+<!-- 						OR -->
+<!-- 						INSTR(RECEIVE_MAIL_RECEIVER, #{simpleCondition.searchWord}) > 0 -->
+<!-- 					</otherwise> -->
+<!-- 				</choose> -->
+<!-- 		</if> -->
+<!-- 	</sql> -->
+
+	<resultMap type="kr.or.ddit.messenger.vo.ChatRoomVO" id="chatRoomDetailMap">
+	    <result property="empCd" column="EMP_CD"/>
+	    <result property="roomName" column="ROOM_NAME"/>
+	    <collection property="chatUserList" ofType="kr.or.ddit.messenger.vo.ChatUserVO">
+	        <result property="empCd" column="CHAT_USER.EMP_CD"/>
+	    </collection>
+	</resultMap>
+	<select id="getChatRoomDetail" resultMap="chatRoomDetailMap">
+	    SELECT CHAT_ROOM.ROOM_NO, CHAT_ROOM.ROOM_NAME,
+	           CHAT_USER.EMP_CD as "CHAT_USER.EMP_CD"
+	    FROM CHAT_ROOM
+	    LEFT JOIN CHAT_USER
+	    ON CHAT_ROOM.ROOM_NO = CHAT_USER.ROOM_NO
+	    WHERE CHAT_ROOM.ROOM_NO=#{roomNo}
+	</select>
+
+	<select id="selectChatRoomList"
+		resultType="kr.or.ddit.messenger.vo.ChatRoomVO">
+		SELECT
+		ROOM_NO, EMP_CD
+		FROM CHAT_USER
+<!-- 		<include refid="searchFrag" /> -->
+		WHERE EMP_CD=#{empCd}
+	</select>
+
+	<insert id="createChatRoom"
+		parameterType="kr.or.ddit.messenger.vo.ChatRoomVO">
+		<selectKey keyProperty="roomNo" resultType="int"
+			order="BEFORE">
+			SELECT ROOM_NO_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO CHAT_ROOM(
+		ROOM_NO
+		, ROOM_NAME
+		,EMP_CD
+		)VALUES(
+		#{roomNo,jdbcType=NUMERIC}
+		, #{roomName,jdbcType=VARCHAR}
+		, #{empCd}
+		)
+	</insert>
+	
+	<select id="getChatRoomName" resultType="string">
+		SELECT ROOM_NAME
+		FROM CHAT_ROOM
+		WHERE ROOM_NO = #{roomNo}
+	</select>
+
+	<delete id="outChatRoom" parameterType="kr.or.ddit.messenger.vo.ChatUserVO">
+		DELETE 
+		FROM CHAT_USER
+		WHERE EMP_CD=#{empCd}
+		AND ROOM_NO=#{roomNo}
+	</delete>
+</mapper>

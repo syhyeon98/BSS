@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mail.dao.MailBoxMainDAO">
+
+  <!-- 보낸메일 리스트 -->
+  <select id="selectSendMailList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.mail.vo.MailBoxVO" >
+  	SELECT ROWNUM RNUM, B.*
+	FROM (
+	  	SELECT  
+		    RECEIVE_MAIL_NO
+		    , EMP_CD
+		    , RECEIVE_MAIL_SENDER
+		    , RECEIVE_MAIL_RECEIVER
+		    , RECEIVE_MAIL_CONTENT
+		    , RECEIVE_MAIL_TITLE
+		    , RECEIVE_MAIL_DATE
+		    , ATCH_NO
+		    , MAIL_IMPO
+		    , MAIL_DELETE
+		    , MAIL_TEMP
+		    , MAIL_IMPO_OTHER
+		    , MAIL_DELETE_OTHER
+		FROM MAIL_BOX  
+		WHERE RECEIVE_MAIL_SENDER=
+		    (SELECT EMP_MAIL 
+		    FROM EMPLOYEE
+		    WHERE EMP_CD =#{empCd}) AND MAIL_DELETE = 0 AND MAIL_TEMP=0
+		    AND RECEIVE_MAIL_RECEIVER != RECEIVE_MAIL_SENDER
+		ORDER BY RECEIVE_MAIL_DATE DESC
+	) B
+  </select>
+  
+  <!-- 보낸메일 갯수 -->
+  <select id="selectSendMailCount" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+	  SELECT  
+	   COUNT(*)
+	  FROM MAIL_BOX
+	  WHERE RECEIVE_MAIL_SENDER=
+	    (SELECT EMP_MAIL 
+	    FROM EMPLOYEE
+	    WHERE EMP_CD =#{empCd}) AND MAIL_DELETE = 0 AND MAIL_TEMP=0
+	    AND RECEIVE_MAIL_RECEIVER != RECEIVE_MAIL_SENDER
+	  ORDER BY RECEIVE_MAIL_DATE DESC
+  </select>
+  
+  <!-- 받은메일 리스트  -->
+  <select id="selectReceiveMailList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.mail.vo.MailBoxVO">
+	   	SELECT ROWNUM RNUM, B.*
+			FROM (
+			  SELECT  
+			    RECEIVE_MAIL_NO
+			    , EMP_CD
+			    , RECEIVE_MAIL_SENDER
+			    , RECEIVE_MAIL_RECEIVER
+			    , RECEIVE_MAIL_CONTENT
+			    , RECEIVE_MAIL_TITLE
+			    , RECEIVE_MAIL_DATE
+			    , ATCH_NO
+			    , MAIL_IMPO
+			    , MAIL_DELETE
+			    , MAIL_TEMP
+			    , MAIL_IMPO_OTHER
+			    , MAIL_DELETE_OTHER
+			FROM MAIL_BOX
+			WHERE RECEIVE_MAIL_RECEIVER=
+			    (SELECT EMP_MAIL 
+			    FROM EMPLOYEE
+			    WHERE EMP_CD =#{empCd}) AND MAIL_DELETE_OTHER = 0  AND MAIL_TEMP=0
+			    AND RECEIVE_MAIL_RECEIVER != RECEIVE_MAIL_SENDER
+			ORDER BY RECEIVE_MAIL_DATE DESC
+			) B
+  </select>
+  
+  <!-- 받은메일 갯수 -->
+  <select id="selectReceiveMailCount" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+    SELECT  
+	   COUNT(*)
+	FROM MAIL_BOX
+	WHERE RECEIVE_MAIL_RECEIVER=
+	    (SELECT EMP_MAIL 
+	    FROM EMPLOYEE
+	    WHERE EMP_CD =#{empCd}) AND MAIL_DELETE_OTHER = 0  AND MAIL_TEMP = 0
+	    AND RECEIVE_MAIL_RECEIVER != RECEIVE_MAIL_SENDER
+	ORDER BY RECEIVE_MAIL_DATE DESC
+  </select>
+  
+  <!-- 내게쓴 메일 리스트 -->
+  <select id="selectToMeMailList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.mail.vo.MailBoxVO">
+  	SELECT ROWNUM RNUM, B.*
+	FROM (
+	  	SELECT  
+		    RECEIVE_MAIL_NO
+		    , EMP_CD
+		    , RECEIVE_MAIL_SENDER
+		    , RECEIVE_MAIL_RECEIVER
+		    , RECEIVE_MAIL_CONTENT
+		    , RECEIVE_MAIL_TITLE
+		    , RECEIVE_MAIL_DATE
+		    , ATCH_NO
+		    , MAIL_IMPO
+		    , MAIL_DELETE
+		    , MAIL_TEMP
+		    , MAIL_IMPO_OTHER
+		    , MAIL_DELETE_OTHER
+		FROM MAIL_BOX
+		WHERE RECEIVE_MAIL_RECEIVER=
+		    (SELECT EMP_MAIL 
+		    FROM EMPLOYEE
+		    WHERE EMP_CD =#{empCd}) AND MAIL_DELETE_OTHER = 0  AND MAIL_TEMP=0
+		    AND RECEIVE_MAIL_RECEIVER = RECEIVE_MAIL_SENDER
+		ORDER BY RECEIVE_MAIL_DATE DESC
+		) B
+  </select>
+  
+  <!-- 내게쓴 메일 갯수 -->
+  <select id="selectToMeMailCount" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+  	SELECT  
+	   COUNT(*)
+	FROM MAIL_BOX
+	WHERE RECEIVE_MAIL_RECEIVER=
+	    (SELECT EMP_MAIL 
+	    FROM EMPLOYEE
+	    WHERE EMP_CD =#{empCd}) AND MAIL_DELETE_OTHER = 0  AND MAIL_TEMP=0
+	    AND RECEIVE_MAIL_RECEIVER = RECEIVE_MAIL_SENDER
+	ORDER BY RECEIVE_MAIL_DATE DESC
+  </select>
+  
+  <!-- 휴지통 리스트 -->
+  <select id="selectDeleteMailList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.mail.vo.MailBoxVO">
+	  SELECT ROWNUM RNUM, B.*
+	FROM (
+		  SELECT  
+		    RECEIVE_MAIL_NO
+		    , EMP_CD
+		    , RECEIVE_MAIL_SENDER
+		    , RECEIVE_MAIL_RECEIVER
+		    , RECEIVE_MAIL_CONTENT
+		    , RECEIVE_MAIL_TITLE
+		    , RECEIVE_MAIL_DATE
+		    , ATCH_NO
+		    , MAIL_IMPO
+		    , MAIL_DELETE
+		    , MAIL_TEMP
+		    , MAIL_IMPO_OTHER
+		    , MAIL_DELETE_OTHER
+		FROM MAIL_BOX
+		WHERE (RECEIVE_MAIL_RECEIVER=
+		    (SELECT EMP_MAIL 
+		    FROM EMPLOYEE
+		    WHERE EMP_CD =#{empCd})
+		AND MAIL_DELETE_OTHER=1)
+		OR (RECEIVE_MAIL_SENDER=
+		    (SELECT EMP_MAIL 
+		    FROM EMPLOYEE
+		    WHERE EMP_CD =#{empCd})
+		AND MAIL_DELETE=1)
+		ORDER BY RECEIVE_MAIL_DATE DESC
+		) B
+  </select>
+  
+  <!-- 휴지통 총 갯수 -->
+  <select id="selectDeleteMailCount" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+	SELECT  
+	    COUNT(*)
+	FROM MAIL_BOX
+	WHERE (RECEIVE_MAIL_RECEIVER=
+	    (SELECT EMP_MAIL 
+	    FROM EMPLOYEE
+	    WHERE EMP_CD =#{empCd})
+	AND MAIL_DELETE_OTHER=1)
+	OR (RECEIVE_MAIL_SENDER=
+	    (SELECT EMP_MAIL 
+	    FROM EMPLOYEE
+	    WHERE EMP_CD =#{empCd})
+	AND MAIL_DELETE=1)
+	ORDER BY RECEIVE_MAIL_DATE DESC
+  </select>
+  
+  
+</mapper>

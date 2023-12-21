@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.employee.dao.MainEmployeeDAO">
+	
+	<!-- 전체직원수 -->
+	<select id="totalCountEmployee">
+		SELECT
+		    COUNT(*)
+		FROM
+		    EMPLOYEE
+		WHERE EMP_RESIGNATION='N'
+	</select>
+
+	<!-- 부서별 전체 직원수 -->
+	<select id="totalCountDepEmployee"  parameterType="kr.or.ddit.employee.vo.DepartmentCountVO">
+		SELECT EMP.DEP_CD,DEP.DEP_NAME,COUNT(*) AS "COUNT"
+		FROM EMPLOYEE EMP
+		INNER JOIN DEPARTMENT DEP
+		ON(EMP.DEP_CD = DEP.DEP_CD)
+		WHERE EMP.EMP_RESIGNATION ='N'
+		GROUP BY EMP.DEP_CD, DEP.DEP_NAME
+	</select>
+	
+	<!-- 이번달 새로 들어온 직원 -->
+	 <select id="newEmployeeList" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+	 	SELECT
+		    EMP_CD
+		  , DEP_CD
+		  , PO_CD
+		  , SIGN_IMG
+		  , OUT_ATCH_CD
+		  , OA.ATCH_NO
+		  , OUT_ATCH_DT
+		  , OUT_ATCH_AT
+		  , OUT_STAR_COURS
+		  , OUT_ATCH_NM
+		  , OUT_ORIGIN_NM
+		  , OUT_ATCH_CN
+		  , OUT_ATCH_SIZE
+		  , OUT_ATCH_EXIST
+		  , OUT_FILE_NO
+		FROM
+		    EMPLOYEE EMP
+		LEFT OUTER JOIN OUT_ATCH OA ON(EMP.ATCH_NO = OA.ATCH_NO)
+		WHERE SUBSTR(EMP_CD,1,4) = TO_CHAR(SYSDATE,'YYMM')
+	 </select>
+	 
+	 <!-- 최근입사자 수 -->
+	 <select id="totalCountYearEmployee" parameterType="kr.or.ddit.employee.vo.EmployeeCountVO">
+	 	SELECT TO_CHAR(ENP_START,'YY/MM') ENP_START ,COUNT(*) count 
+		FROM EMPLOYEE
+		GROUP BY TO_CHAR(ENP_START,'YY/MM')
+		ORDER BY ENP_START DESC
+	 </select>
+	
+	<!-- 최근 5개 월급 총액 -->
+	<select id="totalSalary" parameterType="kr.or.ddit.employee.vo.TotalSalaryMonthVO">
+		SELECT A.* 
+		FROM(
+		SELECT ROWNUM RNUM, B.*
+		    FROM(
+		    SELECT
+		        SAL_NO
+		      , SUM(SAL_TOTAL) SUMSALARY
+		    FROM
+		        SALARY_DETAIL
+		    GROUP BY SAL_NO
+		    ORDER BY SAL_NO DESC)B
+		)A
+		<![CDATA[
+		where rnum >= 1 and rnum <= 5
+		]]>
+		ORDER BY RNUM DESC
+	</select>
+	
+	
+</mapper>

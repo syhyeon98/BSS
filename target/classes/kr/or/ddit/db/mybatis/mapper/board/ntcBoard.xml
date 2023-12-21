@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.BoardNtc.dao.NtcboardDAO">
+
+	<select id="selectTotalRecord" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM NTC_BOARD
+	</select>
+	
+	<select id="selectNtcList" resultType="kr.or.ddit.BoardNtc.vo.NtcboardVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		WITH ORDEREDNTC AS (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		     select NTC_NO, NTC_TTL
+             , (C.DEP_NAME || ' ' || B.EMP_NAME) AS EMP_NAME
+             , NTC_DT
+       		 FROM NTC_BOARD A
+       		 INNER JOIN EMPLOYEE B ON( A.EMP_CD = B.EMP_CD) 
+        	 INNER JOIN DEPARTMENT C ON(B.DEP_CD = C.DEP_CD)
+        	 ORDER BY A.NTC_DT DESC
+		    ) A
+		)
+		SELECT *
+		FROM ORDEREDNTC
+		WHERE RNUM BETWEEN #{startRow} AND #{endRow}
+	</select>
+	
+	<select id="selectNtc" parameterType="kr.or.ddit.BoardNtc.vo.NtcboardVO">
+		SELECT
+			NTC_NO, NTC_DT, NTC_TTL, NTC_CN, EMP_NAME, DEP_NAME, EMP_PW, A.ATCH_NO
+            , OUT_ATCH_CD, OUT_ATCH_DT, OUT_ATCH_AT, OUT_STAR_COURS, OUT_ATCH_NM, OUT_ORIGIN_NM
+            , OUT_ATCH_CN, OUT_ATCH_SIZE, OUT_ATCH_EXIST, OUT_FILE_NO
+		FROM NTC_BOARD A
+       		 INNER JOIN EMPLOYEE B ON( A.EMP_CD = B.EMP_CD) 
+        	 INNER JOIN DEPARTMENT C ON(B.DEP_CD = C.DEP_CD)
+             LEFT OUTER JOIN OUT_ATCH OA ON(A.ATCH_NO = OA.ATCH_NO)
+        WHERE NTC_NO = #{ntcNo}
+	</select>
+	
+	<select id="selectNtcForm" resultType="AtchFileDetailVO" parameterType="NtcboardVO">
+		SELECT * FROM OUT_ATCH
+		LEFT OUTER JOIN ATCH USING(ATCH_NO)
+		WHERE ATCH_NO = #{atchNo}
+	</select>
+	
+	<select id="mainNtcList" resultType="kr.or.ddit.BoardNtc.vo.NtcboardVO">
+	SELECT B.*
+		from(
+			SELECT ROWNUM RNUM, A.*
+			from(	
+				SELECT
+					NTC_NO, NTC_TTL, NB.EMP_CD, EMP_NAME, DEP_NAME, NTC_CN, NTC_DT
+				FROM NTC_BOARD NB
+					LEFT OUTER JOIN EMPLOYEE EMP ON(NB.EMP_CD = EMP.EMP_CD)
+					LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_CD = DEP.DEP_CD)
+				ORDER BY NTC_DT DESC
+			)A
+	)B
+	<![CDATA[WHERE RNUM <=10]]>
+	</select>
+	
+	<insert id="insertNtc" parameterType="kr.or.ddit.BoardNtc.vo.NtcboardVO">
+		<selectKey order="BEFORE" keyProperty="ntcNo" resultType="int">
+			SELECT NTC_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO NTC_BOARD(
+			  NTC_NO 
+			, EMP_CD
+			, NTC_TTL
+			, NTC_CN
+			, NTC_DT
+			, ATCH_NO
+		)VALUES(
+			#{ntcNo}
+			, #{empCd,jdbcType=VARCHAR}
+			, #{ntcTtl,jdbcType=VARCHAR}
+			, #{ntcCn,jdbcType=CLOB}
+			, SYSDATE
+			, #{atchNo,jdbcType=NUMERIC}
+			)
+	</insert>
+	<update id="updateNtc" parameterType="kr.or.ddit.BoardNtc.vo.NtcboardVO">
+		update ntc_board 
+		set
+		 NTC_TTL = #{ntcTtl,jdbcType=VARCHAR}
+		, NTC_CN = #{ntcCn,jdbcType=VARCHAR}
+		, NTC_DT = SYSDATE
+		where NTC_NO = #{ntcNo}
+	</update>
+	
+	<delete id="deleteNtc" parameterType="kr.or.ddit.BoardNtc.vo.NtcboardVO">
+		 DELETE NTC_BOARD WHERE NTC_NO = #{ntcNo}
+	</delete>
+</mapper>

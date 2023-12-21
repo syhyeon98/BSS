@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.BoardReqcmnt.dao.CommentDAO">
+
+	<insert id="insertComment" parameterType="kr.or.ddit.BoardReqcmnt.vo.CmntVO">
+   <selectKey order="BEFORE" keyProperty="reqNo" resultType="CmntVO">
+	    SELECT RB.REQ_NO
+	    FROM REQ_BOARD RB
+	    WHERE RB.REQ_NO = #{reqNo,jdbcType=NUMERIC}
+	</selectKey>
+    INSERT INTO REQ_CMNT
+    (
+        RCNMT_NO
+        , REQ_NO
+        , RCNMT_DT
+        , RCMNT_CN
+    )
+    VALUES(
+        REQ_CMNT_SEQ.NEXTVAL
+        , #{reqNo,jdbcType=NUMERIC}
+        , SYSDATE
+        , #{rcmntCn,jdbcType=VARCHAR}
+    )
+	</insert>
+
+	<select id="selectCommentsByReqNo" resultType="kr.or.ddit.BoardReqcmnt.vo.CmntVO" parameterType="int">
+    SELECT B.*
+    FROM (
+        SELECT
+            RC.RCNMT_NO
+            , RD.REQ_NO
+            , RC.RCNMT_DT
+            , RC.RCMNT_CN
+            , EMP_PW
+        FROM REQ_BOARD RD
+        LEFT OUTER JOIN REQ_CMNT RC ON (RD.REQ_NO = RC.REQ_NO)
+        LEFT OUTER JOIN EMPLOYEE E ON(RD.EMP_CD = E.EMP_CD)
+        where RC.RCNMT_NO is not null and rd.req_no = #{reqNo}
+        ORDER BY RC.RCNMT_DT DESC
+    ) B
+</select>
+
+<update id="updateComment" parameterType="kr.or.ddit.BoardReqcmnt.vo.CmntVO">
+	UPDATE REQ_CMNT 
+	SET 
+	RCNMT_DT = SYSDATE
+	, RCMNT_CN = #{rcmntCn}
+	WHERE RCNMT_NO = #{rcnmtNo}
+
+</update>
+
+<delete id="delectCommentAll" parameterType="kr.or.ddit.BoardReq.vo.ReqboardVO">
+	delete req_cmnt where req_no = #{reqNo}
+</delete>
+
+<delete id="deleteComment" parameterType="kr.or.ddit.BoardReq.vo.ReqboardVO">
+	delete req_cmnt where rcnmt_no = #{rcnmtNo} and req_no = #{reqNo}
+</delete>
+
+<select id="selectComment" parameterType="int" resultType="kr.or.ddit.BoardReqcmnt.vo.CmntVO">
+		SELECT
+            RC.RCNMT_NO
+            , RD.REQ_NO
+            , RC.RCNMT_DT
+            , RC.RCMNT_CN
+            , EMP_PW
+        FROM REQ_BOARD RD
+        LEFT OUTER JOIN REQ_CMNT RC ON (RD.REQ_NO = RC.REQ_NO)
+        LEFT OUTER JOIN EMPLOYEE E ON(RD.EMP_CD = E.EMP_CD)
+        where RC.RCNMT_NO is not null and RC.RCNMT_NO = #{rcnmtNo}
+</select>
+
+</mapper>

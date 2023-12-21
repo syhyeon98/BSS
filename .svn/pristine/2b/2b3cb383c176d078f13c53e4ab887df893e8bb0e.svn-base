@@ -1,0 +1,191 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-12">
+			<h5>☗ 인사관리 ▸ 급여관리 ▸ 공제관리</h5>
+			<hr color="black">
+			<div class="container-fluid">
+				<div class="row">
+					<div class="col-md-12">
+						<form id="ddcForm" method="post" action="ddcInsert.do">
+							<table class="table table-hover table-bordered textCenter">
+								<thead>
+									<tr>
+										<th class="col-md-3">체크</th>
+										<th class="col-md-3">공제항목코드</th>
+										<th class="col-md-3">공제항목명</th>
+										<th class="col-md-3">계산식</th>
+									</tr>
+								</thead>
+								<tbody id="ddcList">
+									<c:forEach items="${ddcList}" var="ddc">
+										<tr>
+											<td class="col-md-3"><input type="checkbox"
+												name="checkBox"></td>
+											<td class="col-md-3 ddcCd">${ddc.ddcCd }</td>
+											<td class="col-md-3">${ddc.ddcNm }</td>
+											<td class="col-md-3">${ddc.ddcCrtr }%</td>
+										</tr>
+									</c:forEach>
+								</tbody>
+							</table>
+						</form>
+					</div>
+				</div>
+			</div>
+			<div class="btn-group btn-group-md" role="group">
+				<button id="addForm" class="btn btn-secondary" type="button">입력칸추가</button>
+				<button id="insertBtn" class="btn btn-secondary" type="button">저장</button>
+				<button id="deleteRow" class="btn btn-secondary" type="button">선택삭제</button>
+				<button id="modifyRow" class="btn btn-secondary" type="button"
+					data-bs-toggle="modal" data-bs-target="#staticBackdrop">선택수정</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<div class="modal" data-url="${viewURL}" id="staticBackdrop"
+	tabindex="-1">
+	<div class="modal-dialog modal-fullscreen-sm-down">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">공제수정</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"
+					aria-label="Close"></button>
+			</div>
+			<div class="modal-body"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary"
+					data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<script>
+// 	let html=`<tr>
+// 		<td></td>
+// 		<td></td>
+// 		<td><input type="text" name="ddcNm"></td>
+// 		<td><input type="text" name="ddcCrtr"></td>
+// 			</tr>`;
+// 	$('#addForm').on('click',function(){
+// 		$('#ddcList').append(html);
+		
+// 	})
+	
+	$('#insertBtn').on('click',function(){
+		Swal.fire({
+			  title: '작성하신 공제를 추가하시겠습니까?',
+			  showCancelButton: true,
+			  showClass: {
+			    popup: 'animate__animated animate__fadeInDown'
+			  },
+			  hideClass: {
+			    popup: 'animate__animated animate__fadeOutUp'
+			  }
+			}).then((result)=>{
+				if(result.isConfirmed){
+					$('#ddcForm').submit();
+				}
+			})
+		
+	})
+	
+	let counter = 0;
+
+	$('#addForm').on('click', function() {
+	  let modifiedHtml = `<tr>
+	    <td></td>
+	    <td></td>
+	    <td><input type="text" required name="ddcList[\${counter}].ddcNm"></td>
+	    <td><input type="text" required name="ddcList[\${counter}].ddcCrtr"></td>
+	  </tr>`;
+	  
+	  $('#ddcList').append(modifiedHtml);
+	  
+	  counter++;
+	});
+	
+	$('#deleteRow').on('click',function(){
+		let $checkDdcCd= $("input:checked").parent('td').siblings('.ddcCd');
+		let ddcCd=[];
+		for(let i = 0;i<$checkDdcCd.length;i++){
+			ddcCd.push($checkDdcCd[i].innerText);
+		}
+		
+		Swal.fire({
+			  title: '선택 공제를 삭제하시겠습니까?',
+			  showCancelButton: true,
+			  showClass: {
+			    popup: 'animate__animated animate__fadeInDown'
+			  },
+			  hideClass: {
+			    popup: 'animate__animated animate__fadeOutUp'
+			  }
+			}).then((result)=>{
+				if(result.isConfirmed){
+					
+					let setting = {
+							url : "ddcDelete.do",
+							method : "post",
+							dataType : "text",
+							traditional: true,
+							data : {
+								ddcCd : ddcCd
+							},
+							success : function(resp) {
+								if(resp=="success"){
+									Swal.fire('삭제되었습니다!', '', 'success')
+									$("input:checked").parents('tr').remove();
+								}else{
+									alert("실행중 실패");
+								}
+							},
+							error : function(jqXHR, status, error) {
+								console.log(jqXHR)
+								console.log(status)
+								console.log(error)
+							}
+						}
+						$.ajax(setting);
+				}
+			})
+		
+		
+	})
+	
+	/*수정을 위한*/
+	$(staticBackdrop).on('show.bs.modal',function(event){
+ 		let $checkDdcCd= $("input:checked").parent('td').siblings('.ddcCd');
+ 		if($checkDdcCd.length==1){
+ 	 		let $modalBody = $(this).find(".modal-body");
+ 	 		let ddcCd = $checkDdcCd.text();
+ 	 		if(ddcCd){
+ 	 			let setting = {
+ 					url : `${pageContext.request.contextPath}/ddc/ddcModify.do`,
+ 					dataType : "html",
+ 					data : {
+ 						ddcCd:ddcCd
+ 					},
+ 					success : function(resp) {
+ 						$modalBody.html(resp);
+ 					}
+ 				}
+
+ 				$.ajax(setting);
+ 	 		}
+ 		}else{
+ 			alert("수정은 한개씩 가능합니다.");
+ 			 event.preventDefault(); 
+ 			return;
+ 		}
+ 	}).on('hidden.bs.modal',function(){
+ 		let $modalBody = $(this).find(".modal-body");
+ 		$modalBody.empty();
+ 	})
+</script>

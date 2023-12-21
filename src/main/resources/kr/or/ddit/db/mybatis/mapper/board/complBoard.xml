@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.BoardCompl.dao.ComplboardDAO">
+	
+	<select id="selectTotalRecord" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM COMPL_BOARD
+	</select>
+	<select id="selectComplList" resultType="kr.or.ddit.BoardCompl.vo.ComplboardVO" 
+					parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+SELECT 
+    RNUM, COMPL_NO, COMPL_TTL
+    , COMPL_DT, COMPL_EMP_NAME
+    , EMP_NAME, COMPL_EMP_CD, EMP_CD
+FROM
+(
+    SELECT 
+        ROWNUM RNUM, A.*
+    FROM
+    (
+        SELECT COMPL_NO, COMPL_TTL, COMPL_DT
+        , EM.EMP_NAME AS COMPL_EMP_NAME
+        , E.EMP_NAME, C.EMP_CD AS COMPL_EMP_CD
+        , C.EMP_CD AS EMP_CD
+        
+        FROM COMPL_BOARD C
+        LEFT OUTER JOIN EMPLOYEE E ON (E.EMP_CD = C.EMP_CD)
+        LEFT OUTER JOIN EMPLOYEE EM ON (C.COMPL_EMP_CD = EM.EMP_CD)
+        LEFT OUTER JOIN DEPARTMENT D ON (E.DEP_CD = D.DEP_CD AND C.COMPL_EMP_CD = E.EMP_CD)
+        ORDER BY COMPL_DT DESC
+    ) A
+	      <![CDATA[
+	    WHERE ROWNUM <= #{endRow}
+	)
+	WHERE RNUM >= #{startRow}
+	  ]]>				
+					
+	</select>
+	<select id="selectCompl" parameterType="kr.or.ddit.BoardCompl.vo.ComplboardVO">
+		 SELECT 
+		 COMPL_NO, COMPL_TTL, COMPL_DT
+		 , EM.EMP_NAME AS COMPL_EMP_NAME
+		 , E.EMP_NAME, C.EMP_CD AS COMPL_EMP_CD
+		 , EM.EMP_CD AS EMP_CD, COMPL_CN
+		 FROM COMPL_BOARD C
+		 
+        LEFT OUTER JOIN EMPLOYEE E ON (E.EMP_CD = C.EMP_CD)
+        LEFT OUTER JOIN EMPLOYEE EM ON (C.COMPL_EMP_CD = EM.EMP_CD)
+        LEFT OUTER JOIN DEPARTMENT D ON (E.DEP_CD = D.DEP_CD AND C.COMPL_EMP_CD = E.EMP_CD)
+        WHERE COMPL_NO = #{complNo}
+	</select>
+	
+	<insert id="insertCompl" parameterType="kr.or.ddit.calendar.vo.CompanyVO">
+		<selectKey order="BEFORE" keyProperty="complNo" resultType="int">
+			SELECT COMPL_SEQ.NEXTVAL AS complNo FROM DUAL		
+		</selectKey>
+		INSERT INTO COMPL_BOARD(
+		   	COMPL_NO
+		  , EMP_CD
+		  , COMPL_EMP_CD
+		  , COMPL_TTL
+		  , COMPL_CN
+		  , COMPL_DT
+		)VALUES(
+		  #{complNo,jdbcType=NUMERIC}
+		, #{empCd,jdbcType=VARCHAR}
+		, #{complEmpCd,jdbcType=VARCHAR}
+		, #{complTtl,jdbcType=VARCHAR}
+		, #{complCn,jdbcType=CLOB}
+		, SYSDATE
+		)
+	</insert>
+	<select id="selectComplEmp" parameterType="kr.or.ddit.BoardCompl.vo.ComplboardVO">
+		SELECT B.EMP_NAME AS COMPL_EMP_NAME 
+		, DEP_NAME
+			FROM (
+    			SELECT COMPL_EMP_CD, COUNT(COMPL_EMP_CD) AS COUNT
+    			FROM COMPL_BOARD
+   				GROUP BY COMPL_EMP_CD
+    			ORDER BY COUNT DESC
+			) A
+    			INNER JOIN EMPLOYEE B ON (A.COMPL_EMP_CD = B.EMP_CD) 
+    			INNER JOIN DEPARTMENT C ON (B.DEP_CD = C.DEP_CD)
+			WHERE ROWNUM = 1
+	</select>
+	
+	<select id="myComplBoardList" parameterType="string" resultType="kr.or.ddit.BoardCompl.vo.ComplboardVO">
+		SELECT
+		ROWNUM as rnum
+		, COMPL_NO, EMP_NAME
+		, COMPL_EMP_CD, COMPL_TTL, COMPL_CN, COMPL_DT
+		 FROM COMPL_BOARD A 
+		LEFT OUTER JOIN EMPLOYEE B ON(A.EMP_CD = B.EMP_CD)
+		WHERE A.EMP_CD = #{empCd,jdbcType=VARCHAR}
+	</select>
+	
+	<delete id="deleteCompl" parameterType="ComplboardVO">
+		DELETE COMPL_BOARD where COMPL_NO = #{complNo}
+	</delete>	
+	
+	<update id="updateCompl" parameterType="ComplboardVO">
+		update compl_board
+		set
+		compl_cn = #{complCn,jdbcType=VARCHAR}
+		, compl_dt = SYSDATE
+		, COMPL_TTL = #{complTtl,jdbcType=VARCHAR}
+		where compl_no = #{complNo}
+		
+		
+		
+	</update>	
+</mapper>

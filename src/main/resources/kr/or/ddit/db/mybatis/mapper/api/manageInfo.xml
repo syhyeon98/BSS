@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.finapi.dao.ManageInfoDAO">
+	
+	<resultMap type="kr.or.ddit.finapi.vo.ManageBankVO" id="manageBankMap" autoMapping="true">
+	    <id property="financeCd" column="FINANCE_CD" />
+	    <collection property="statisticsInfo" ofType="kr.or.ddit.finapi.vo.StatisticsInfoVO" autoMapping="true">
+	        <id property="baseMonth" column="BASE_MONTH" />
+	    	<collection property="descriptionList" ofType="kr.or.ddit.finapi.vo.DescriptionVO">
+	    		<id property="columnId" column="COLUMN_ID"/>
+	    	</collection>
+	    </collection>
+	    
+	</resultMap>
+
+	<select id="selectManageBankList" resultType="kr.or.ddit.finapi.vo.ManageBankVO">
+	
+		SELECT FINANCE_CD, FINANCE_NM
+		FROM MANAGE_BANK
+		
+	</select>
+	
+	<select id="selectStatisticsList" resultType="kr.or.ddit.finapi.vo.StatisticsVO" parameterType="string">
+		SELECT
+		    LIST_NO
+		  , LIST_NM
+		  , LRG_DIV_NM
+		  , SML_DIV_NM
+		FROM
+		    STATISTIC
+		WHERE SML_DIV_NM=#{smlDivNm}
+	</select>
+	
+	<select id="selectAccountList" resultType="kr.or.ddit.finapi.vo.AccountVO" parameterType="string">
+	
+		SELECT
+		    ACCOUNT_CD
+		  , ACCOUNT_NM
+		  , LIST_NO
+		  , LIST_NM
+		FROM
+		    ACCOUNT
+		WHERE LIST_NO=#{listNo}
+	</select>
+	
+	
+	<select id="selectStatisticInfoList" resultMap="manageBankMap" parameterType="kr.or.ddit.finapi.vo.StatisticsInfoVO">
+		SELECT MB.FINANCE_NM, MB.FINANCE_CD, SI.BASE_MONTH, SI.ACCOUNT_CD, SI.ACCOUNT_NM, A, B, C, D, E , COLUMN_ID, COLUMN_NM
+		FROM MANAGE_BANK MB INNER JOIN STATISTICS_INFO SI ON(MB.FINANCE_CD = SI.FINANCE_CD) 
+		INNER JOIN DESCRIPTION D ON (MB.FINANCE_CD=D.FINANCE_CD AND SI.ACCOUNT_CD=D.ACCOUNT_CD AND  SI.ACCOUNT_NM = D.ACCOUNT_NM AND SI.BASE_MONTH= D.BASE_MONTH)
+		WHERE MB.FINANCE_CD=#{financeCd} AND SI.ACCOUNT_CD=#{accountCd} AND SI.ACCOUNT_NM=#{accountNm}
+	</select>
+	
+	<select id="selectDistinctManageBankList"  resultType="kr.or.ddit.finapi.vo.ManageBankVO" parameterType="kr.or.ddit.finapi.vo.StatisticsInfoVO">
+		SELECT distinct MB.FINANCE_NM
+		FROM MANAGE_BANK MB INNER JOIN STATISTICS_INFO SI ON(MB.FINANCE_CD = SI.FINANCE_CD) 
+		INNER JOIN DESCRIPTION D ON (MB.FINANCE_CD=D.FINANCE_CD AND SI.ACCOUNT_CD=D.ACCOUNT_CD AND  SI.ACCOUNT_NM = D.ACCOUNT_NM AND SI.BASE_MONTH= D.BASE_MONTH)
+		WHERE MB.FINANCE_CD=#{financeCd}
+	</select>
+	
+	
+</mapper>

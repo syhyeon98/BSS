@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.mail.dao.MailBoxDAO">
+
+	<!-- 메일 전송시에 DB에 저장 -->
+	<insert id="sendMail" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		 <selectKey keyProperty="receiveMailNo" resultType="int" order="BEFORE">
+		        SELECT RECEIVE_MAIL_NO.NEXTVAL FROM DUAL
+		 </selectKey>
+		INSERT INTO MAIL_BOX(
+			RECEIVE_MAIL_NO
+			, EMP_CD
+			, RECEIVE_MAIL_SENDER
+			, RECEIVE_MAIL_RECEIVER
+			, RECEIVE_MAIL_TITLE
+			, RECEIVE_MAIL_CONTENT
+			, RECEIVE_MAIL_DATE
+			, ATCH_NO
+		)VALUES(
+			#{receiveMailNo,jdbcType=NUMERIC}
+			, #{empCd}
+			, #{receiveMailSender,jdbcType=VARCHAR}
+			, #{receiveMailReceiver,jdbcType=VARCHAR}
+			, #{receiveMailTitle,jdbcType=VARCHAR}
+			, #{receiveMailContent,jdbcType=VARCHAR}
+			, SYSDATE
+			, #{atchNo,jdbcType=NUMERIC}
+		)
+	</insert>
+		
+	<!-- 구글 서버에서 메일을 받아온다 -->
+	<insert id= "insertMail" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		<selectKey keyProperty="receiveMailNo" resultType="int" order="BEFORE">
+            SELECT RECEIVE_MAIL_NO.NEXTVAL FROM DUAL
+        </selectKey>
+		INSERT INTO MAIL_BOX(
+			RECEIVE_MAIL_NO
+			, EMP_CD
+			, RECEIVE_MAIL_SENDER
+			, RECEIVE_MAIL_RECEIVER
+			, RECEIVE_MAIL_TITLE
+			, RECEIVE_MAIL_CONTENT
+			, RECEIVE_MAIL_DATE
+			, ATCH_NO
+		)VALUES(
+			#{receiveMailNo,jdbcType=NUMERIC}
+			, #{empCd}
+			, #{receiveMailSender,jdbcType=VARCHAR}
+			, #{receiveMailReceiver,jdbcType=VARCHAR}
+			, #{receiveMailTitle,jdbcType=VARCHAR}
+			, #{receiveMailContent,jdbcType=VARCHAR}
+			, #{receiveMailDate,jdbcType=DATE}
+			, #{atchNo,jdbcType=NUMERIC}
+		)
+	</insert>
+	
+	<!-- 메일을 전송하지는 않으나 DB에 저장 -->
+	<insert id="mailStorageInfo" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		<selectKey keyProperty="receiveMailNo" resultType="int" order="BEFORE">
+            SELECT RECEIVE_MAIL_NO.NEXTVAL FROM DUAL
+        </selectKey>
+       		INSERT INTO MAIL_BOX(
+			RECEIVE_MAIL_NO
+			, EMP_CD
+			, RECEIVE_MAIL_SENDER
+			, RECEIVE_MAIL_RECEIVER
+			, RECEIVE_MAIL_TITLE
+			, RECEIVE_MAIL_CONTENT
+			, RECEIVE_MAIL_DATE
+			, ATCH_NO
+			, MAIL_TEMP
+		)VALUES(
+			#{receiveMailNo,jdbcType=NUMERIC}
+			, #{empCd}
+			, #{receiveMailSender,jdbcType=VARCHAR}
+			, #{receiveMailReceiver,jdbcType=VARCHAR}
+			, #{receiveMailTitle,jdbcType=VARCHAR}
+			, #{receiveMailContent,jdbcType=VARCHAR}
+			, SYSDATE
+			, #{atchNo,jdbcType=NUMERIC}
+			, 1
+		)
+	</insert>
+	
+	<!-- 임시 저장 된 메일을 전송 -->
+	<delete id="sendTempMail" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		DELETE FROM MAIL_BOX
+		WHERE
+		RECEIVE_MAIL_NO = #{mailNo}
+	</delete>
+	
+	<!-- 메일 관련 정보 가져오기 -->
+	<select id="selectMail" resultType="string">
+		SELECT EMP_MAIL
+		FROM EMPLOYEE
+		WHERE EMP_CD=#{empId}
+	</select>
+	<select id="getMailToken" resultType="string">
+		SELECT MAIL_TOKEN
+		FROM MAIL_DETAIL
+		WHERE EMP_CD=#{empId}
+	</select>
+	
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM MAIL_BOX
+	</select>
+	
+	<sql id="searchFrag">
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'title'">
+						AND INSTR(RECEIVE_MAIL_TITLE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'sender'">
+						AND INSTR(RECEIVE_MAIL_SENDER, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'receiver'">
+						AND INSTR(RECEIVE_MAIL_RECEIVER, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						AND
+						INSTR(RECEIVE_MAIL_TITLE, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(RECEIVE_MAIL_SENDER, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(RECEIVE_MAIL_RECEIVER, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+	</sql>
+	
+	<!-- 각 메일함 조회 및 상세조회 -->
+	<select id="selectMailDetail" parameterType="string" resultType="kr.or.ddit.mail.vo.MailBoxVO">
+		WITH ATCH_FILE_VIEW AS(
+		    SELECT *
+		    FROM ATCH INNER JOIN OUT_ATCH 
+		            USING (ATCH_NO)
+		)
+		select 
+			RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER, RECEIVE_MAIL_RECEIVER
+			, RECEIVE_MAIL_TITLE, RECEIVE_MAIL_CONTENT, RECEIVE_MAIL_DATE
+			, OUT_ATCH_CD, ATCH_NO, OUT_ATCH_DT
+			, OUT_ATCH_AT, OUT_STAR_COURS, OUT_ATCH_NM
+			, OUT_ORIGIN_NM, OUT_ATCH_CN, OUT_ATCH_SIZE
+			, OUT_ATCH_EXIST, OUT_FILE_NO
+		from MAIL_BOX left outer join ATCH_FILE_VIEW using (ATCH_NO)
+		where RECEIVE_MAIL_NO = #{mailNo}
+	</select>
+	<select id="selectAllMail" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE, MAIL_IMPO, MAIL_IMPO_OTHER
+		, MAIL_TEMP, MAIL_DELETE_OTHER
+		FROM MAIL_BOX
+		WHERE
+		EMP_CD =#{empCd} 
+		AND RECEIVE_MAIL_SENDER &lt;&gt; RECEIVE_MAIL_RECEIVER
+		AND MAIL_TEMP = '0'
+		AND MAIL_DELETE = '0'
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<select id="selectSendMailList" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE, MAIL_IMPO, MAIL_IMPO_OTHER
+		, MAIL_TEMP, MAIL_DELETE_OTHER
+		FROM MAIL_BOX
+		WHERE
+		RECEIVE_MAIL_SENDER =#{empMail} 
+		AND RECEIVE_MAIL_SENDER &lt;&gt; RECEIVE_MAIL_RECEIVER
+		AND MAIL_TEMP = '0'
+		AND MAIL_DELETE = '0'
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<select id="selectReciveMailList" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE, MAIL_IMPO, MAIL_IMPO_OTHER
+		, MAIL_TEMP
+		FROM MAIL_BOX
+		WHERE
+		RECEIVE_MAIL_RECEIVER =#{empMail} 
+		AND RECEIVE_MAIL_SENDER &lt;&gt; RECEIVE_MAIL_RECEIVER
+		AND MAIL_TEMP = '0'
+		AND MAIL_DELETE_OTHER = '0'
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<select id="selectTempMailList" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE, MAIL_TEMP, MAIL_DELETE_OTHER
+		FROM MAIL_BOX
+		WHERE (RECEIVE_MAIL_SENDER =#{empMail} OR RECEIVE_MAIL_RECEIVER =#{empMail})
+		AND MAIL_TEMP = '1'
+		AND MAIL_DELETE = '0'
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<select id="selectToMeList" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE
+		FROM MAIL_BOX
+		WHERE EMP_CD =#{empCd} 
+		AND MAIL_TEMP = '0'
+		AND RECEIVE_MAIL_SENDER = RECEIVE_MAIL_RECEIVER
+		AND MAIL_DELETE = '0'
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<!-- 삭제 메일 관련 -->
+	<update id="mailWaste" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		UPDATE MAIL_BOX
+		SET
+  		MAIL_DELETE = CASE
+        WHEN EMP_CD = #{loginEmpCd} AND MAIL_DELETE= 0 THEN 1
+        ELSE MAIL_DELETE
+   		END,
+    	MAIL_DELETE_OTHER = CASE
+        WHEN EMP_CD &lt;&gt; #{loginEmpCd} AND MAIL_DELETE_OTHER=0 THEN 1
+        ELSE MAIL_DELETE_OTHER
+    	END
+		WHERE RECEIVE_MAIL_NO = #{receiveMailNo}
+	</update>
+	<select id="selectWasteMailList" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+    	SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE
+		FROM MAIL_BOX
+		WHERE (RECEIVE_MAIL_SENDER = #{loginEmpMail} OR RECEIVE_MAIL_RECEIVER = #{loginEmpMail}) 
+		AND
+		CASE 
+   	 	WHEN EMP_CD = #{loginEmpCd} THEN MAIL_DELETE END =1
+    	OR CASE 
+    	WHEN EMP_CD &lt;&gt; #{loginEmpCd} THEN MAIL_DELETE_OTHER END =1
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<!-- 메일 완전 삭제 -->
+	<delete id="deleteWasteMail" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		UPDATE MAIL_BOX
+		SET
+  		MAIL_DELETE = CASE
+        WHEN EMP_CD = #{loginEmpCd} AND MAIL_DELETE= 1 THEN 2
+        ELSE MAIL_DELETE
+   		END,
+    	MAIL_DELETE_OTHER = CASE
+        WHEN EMP_CD &lt;&gt; #{loginEmpCd} AND MAIL_DELETE_OTHER=1 THEN 2
+        ELSE MAIL_DELETE_OTHER
+    	END
+		WHERE RECEIVE_MAIL_NO = #{receiveMailNo}
+	</delete>
+	<!-- 메일 복구 -->
+	<update id="restoreWasteMail" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+		UPDATE MAIL_BOX
+		SET
+  		MAIL_DELETE = CASE
+        WHEN EMP_CD = #{loginEmpCd} AND MAIL_DELETE= 1 THEN 0
+        ELSE MAIL_DELETE
+   		END,
+    	MAIL_DELETE_OTHER = CASE
+        WHEN EMP_CD &lt;&gt; #{loginEmpCd} AND MAIL_DELETE_OTHER=1 THEN 0
+        ELSE MAIL_DELETE_OTHER
+    	END
+		WHERE RECEIVE_MAIL_NO = #{receiveMailNo}
+	</update>
+	
+	<!-- 중요메일 관련 -->
+	<update id="impoSetMail" parameterType="kr.or.ddit.mail.vo.MailBoxVO">
+	    UPDATE MAIL_BOX
+		SET MAIL_IMPO = CASE 
+        WHEN EMP_CD = #{loginEmpCd} AND MAIL_IMPO = '1' THEN '0'
+        WHEN EMP_CD = #{loginEmpCd} AND MAIL_IMPO = '0' THEN '1'
+        ELSE MAIL_IMPO END,
+   		MAIL_IMPO_OTHER = CASE 
+        WHEN EMP_CD &lt;&gt; #{loginEmpCd} AND MAIL_IMPO_OTHER = '1' THEN '0'
+        WHEN EMP_CD &lt;&gt; #{loginEmpCd} AND MAIL_IMPO_OTHER = '0' THEN '1' 
+        ELSE MAIL_IMPO_OTHER END
+		WHERE RECEIVE_MAIL_NO = #{receiveMailNo}
+	</update>
+	<!-- 중요메일 리스트 출력 -->
+	<select id="selectImpoList" resultType="kr.or.ddit.mail.vo.MailBoxVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+    	SELECT B.*
+		FROM (
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+		SELECT
+		RECEIVE_MAIL_NO, RECEIVE_MAIL_SENDER
+		, RECEIVE_MAIL_RECEIVER, RECEIVE_MAIL_TITLE
+		, RECEIVE_MAIL_DATE
+		FROM MAIL_BOX
+		WHERE
+		MAIL_DELETE = '0'
+		AND
+   		CASE 
+   	 	WHEN RECEIVE_MAIL_SENDER = #{empMail} THEN MAIL_IMPO END ='1'
+    	OR CASE 
+    	WHEN RECEIVE_MAIL_RECEIVER = #{empMail} THEN MAIL_IMPO_OTHER END ='1'
+		<include refid="searchFrag" />
+		ORDER BY RECEIVE_MAIL_NO DESC
+		) A
+		) B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<!-- 메일을 보낸사람의 사번 -->
+	<select id="mailSenderEmpCd" resultType="string">
+		SELECT 
+		EMP_CD
+		FROM MAIL_BOX
+		WHERE RECEIVE_MAIL_NO = #{mailNo}
+	</select>
+	</mapper>

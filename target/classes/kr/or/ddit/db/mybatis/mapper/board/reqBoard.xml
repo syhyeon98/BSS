@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.BoardReq.dao.ReqboardDAO">
+	
+	<select id="selectTotalRecord" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM REQ_BOARD
+	</select>
+	<select id="selectReqList" resultType="kr.or.ddit.BoardReq.vo.ReqboardVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		WITH ORDEREDNTC AS (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		      select REQ_NO, REQ_TTL, REQ_DT
+             , (C.DEP_NAME || ' ' || B.EMP_NAME) AS EMP_NAME, REQ_PW, REQ_CHECK
+       		 FROM REQ_BOARD A
+       		 INNER JOIN EMPLOYEE B ON( A.EMP_CD = B.EMP_CD) 
+        	 INNER JOIN DEPARTMENT C ON(B.DEP_CD = C.DEP_CD)
+ 			 ORDER BY A.REQ_NO DESC
+		    ) A
+		)
+		SELECT *
+		FROM ORDEREDNTC
+		WHERE RNUM BETWEEN #{startRow} AND #{endRow}
+	</select>
+	<select id="selectReq" parameterType="kr.or.ddit.BoardReq.vo.ReqboardVO">
+		SELECT
+			REQ_DT, REQ_TTL, A.EMP_CD, B.EMP_NAME AS EMP_NAME, EMP_PW, REQ_CN, REQ_PW, REQ_NO, DEP_NAME
+			, REQ_CHECK
+		FROM REQ_BOARD A
+			 INNER JOIN EMPLOYEE B ON( A.EMP_CD = B.EMP_CD) 
+        	 INNER JOIN DEPARTMENT C ON(B.DEP_CD = C.DEP_CD)
+		WHERE REQ_NO = #{reqNo}
+	</select>
+	<insert id="insertReq" parameterType="kr.or.ddit.BoardReq.vo.ReqboardVO">
+		<selectKey order="BEFORE" keyProperty="reqNo" resultType="int">
+			SELECT REQ_SEQ.NEXTVAL AS reqNo FROM DUAL
+		</selectKey>
+		INSERT INTO REQ_BOARD(
+			  REQ_NO
+		    , EMP_CD
+		    , REQ_TTL
+			, REQ_CN
+			, REQ_DT
+			, REQ_PW
+			, REQ_CHECK
+		)VALUES(
+			  #{reqNo}
+			, #{empCd,jdbcType=VARCHAR}
+			, #{reqTtl,jdbcType=VARCHAR}
+			, #{reqCn,jdbcType=CLOB}
+			,  SYSDATE
+			, #{reqPw,jdbcType=NUMERIC}
+			, 'N'
+		)
+		
+	</insert>
+	<update id="updateReq" parameterType="kr.or.ddit.BoardReq.vo.ReqboardVO">
+		UPDATE REQ_BOARD
+		SET
+			REQ_TTL = #{reqTtl}
+		   ,REQ_CN = #{reqCn}
+		WHERE REQ_NO = #{reqNo}
+	</update>
+	
+	<update id="updateReqCmnt" parameterType="int">
+		update req_board
+		set req_check = 'Y'
+		where req_no = #{reqNo}
+	</update>
+	
+	<select id="myReqBoardList" resultType="kr.or.ddit.BoardReq.vo.ReqboardVO" parameterType="string">
+		SELECT 
+		ROWNUM AS rnum
+		, REQ_NO
+		, REQ_TTL
+		, REQ_CN
+		, REQ_DT
+		, REQ_CHECK
+		, EMP_NAME
+        FROM REQ_BOARD R
+        LEFT OUTER JOIN EMPLOYEE E ON(R.EMP_CD = E.EMP_CD)
+        WHERE R.EMP_CD = #{empCd,jdbcType=VARCHAR}
+	</select>
+	
+	<delete id="deleteReq" parameterType="kr.or.ddit.BoardReq.vo.ReqboardVO">
+		delete req_board where req_no = #{reqNo}
+	</delete>
+	
+	<select id="reqMainList" resultType="ReqboardVO">
+	SELECT ROWNUM RNUM, A.*
+	FROM(
+	SELECT 
+			REQ_NO, EMP_NAME, REQ_TTL, REQ_CN, REQ_DT, REQ_PW, REQ_CHECK
+		FROM REQ_BOARD RB
+		LEFT OUTER JOIN EMPLOYEE E ON(RB.EMP_CD = E.EMP_CD)
+	WHERE REQ_CHECK = 'N'
+	ORDER BY REQ_DT DESC
+    )A
+	</select>
+		
+</mapper>

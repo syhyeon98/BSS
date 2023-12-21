@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.businesstrip.dao.BusinessTripDAO">
+	
+	<!-- 출장 전체조회 출장일/출장장소/출장목적/직원명 조회  -->
+	<select id="selectBtrip" resultType="kr.or.ddit.businesstrip.vo.BusinessTripVO" parameterType="kr.or.ddit.businesstrip.vo.BusinessTripVO">
+	    SELECT TRIP_NO
+	    		, TRIP_DATE
+	    		, TRIP_PURPOSE
+	    		, TRIP_PLACE
+	    		, TRIP_SDATE
+	    		, TRIP_EDATE
+	            , E.EMP_CD
+	            , E.EMP_NAME
+	    FROM EMPLOYEE E
+	    	INNER JOIN TRIP T ON(E.EMP_CD = T.EMP_CD)
+	    WHERE 1 = 1
+	
+	    <if test="tripDate != null" >
+	        AND TRIP_DATE = #{tripDate, jdbcType=DATE}
+	    </if>
+	    <if test="tripPlace != null and !tripPlace.isEmpty()">
+	        AND TRIP_PLACE = #{tripPlace, jdbcType=VARCHAR}
+	    </if>
+	    <if test="tripPurpose != null and !tripPurpose.isEmpty()">
+	        AND TRIP_PURPOSE = #{tripPurpose, jdbcType=VARCHAR}
+	    </if>
+	    <if test="empName != null and !empName.isEmpty()">
+	        AND EMP_NAME = #{empName, jdbcType=VARCHAR}
+	    </if>
+	    <!-- 추가: 모든 컬럼에 대해 null이 아닌 조건을 추가 -->
+	    <if test="tripDate == null and tripPlace == null and empName == null">
+	        AND 1=0
+	    </if>
+	    ORDER BY T.TRIP_NO DESC
+	    
+	</select>
+	
+	<!-- 로그인한 직원이 출장신청(등록)  -->
+	<insert id="insertBusinessTrip" parameterType="kr.or.ddit.businesstrip.vo.BusinessTripVO">
+		<selectKey order="BEFORE" keyProperty="tripNo" resultType="int">
+			SELECT BTRIP_SEQ.NEXTVAL AS tripNo FROM DUAL
+		</selectKey>
+		INSERT INTO TRIP (
+			TRIP_NO
+			,EMP_CD
+			,TRIP_DATE
+			,TRIP_PURPOSE
+			,TRIP_PLACE
+			,TRIP_SDATE
+			,TRIP_EDATE
+			,DOC_NO
+		) VALUES (
+			#{tripNo,jdbcType=NUMERIC}
+			, #{empCd,jdbcType=VARCHAR}
+			, #{tripDate,jdbcType=DATE}
+			, #{tripPurpose,jdbcType=VARCHAR}
+			, #{tripPlace,jdbcType=VARCHAR}
+			, #{tripSdate,jdbcType=DATE}
+			, #{tripEdate,jdbcType=DATE}
+			, #{docNo,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<!-- 출장 선택하면 모달창에 뜰 선택조회  -->
+	<select id="selectOneBtrip" resultType="kr.or.ddit.businesstrip.vo.BusinessTripVO">
+		SELECT TRIP_NO
+			,T.EMP_CD
+			,E.EMP_NAME
+			,TRIP_DATE
+			,TRIP_PURPOSE
+			,TRIP_PLACE
+			,TRIP_SDATE
+			,TRIP_EDATE
+		FROM TRIP T
+		INNER JOIN EMPLOYEE E ON(E.EMP_CD = T.EMP_CD)
+		WHERE TRIP_NO = #{tripNo,jdbcType=NUMERIC}
+	</select>
+	
+	<!-- 모달창에서 [수정]버튼 누르면 수정  -->
+	<update id="updateBusinessTrip" parameterType="kr.or.ddit.businesstrip.vo.BusinessTripVO" >
+		UPDATE TRIP
+			SET TRIP_DATE = #{tripDate,jdbcType=DATE}
+				, TRIP_PURPOSE = #{tripPurpose,jdbcType=VARCHAR}
+				, TRIP_PLACE = #{tripPlace,jdbcType=VARCHAR}
+		WHERE TRIP_NO = #{tripNo,jdbcType=NUMERIC}	
+	</update>
+	
+	
+	<!-- 출장등록 삭제  -->
+	<delete id="deleteBusinessTrip">
+		DELETE
+		FROM TRIP
+		WHERE TRIP_NO = #{tripNo, jdbcType=VARCHAR}
+	</delete>
+	
+	
+	<!-- [마이페이지] 출장 전체조회 페이징  -->
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM EMPLOYEE E
+			INNER JOIN TRIP T ON(E.EMP_CD = T.EMP_CD)
+	    WHERE E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	</select>
+	
+	<!-- [마이페이지] 출장 전체조회  -->
+	
+	
+	<!-- [마이페이지] 조건 : SYSDATE 출장 전체조회  -->
+<!-- 	<select id="mySelectBtrip" resultType="kr.or.ddit.businesstrip.vo.BusinessTripVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo"> -->
+<!-- 	 SELECT ROWNUM AS RNUM -->
+<!-- 	 			, TRIP_NO -->
+<!-- 	    		, TRIP_DATE -->
+<!-- 	    		, TRIP_PURPOSE -->
+<!-- 	    		, TRIP_PLACE -->
+<!-- 	    		, TRIP_SDATE -->
+<!-- 	    		, TRIP_EDATE -->
+<!-- 	            , E.EMP_CD -->
+<!-- 	            , E.EMP_NAME -->
+<!-- 	            , DOC_NO -->
+<!-- 	    FROM EMPLOYEE E -->
+<!-- 	    	INNER JOIN TRIP T ON(E.EMP_CD = T.EMP_CD) -->
+<!-- 		<![CDATA[   -->
+<!-- 		    WHERE ROWNUM >= #{startRow} AND ROWNUM <= #{endRow} -->
+<!-- 		]]>	    -->
+<!--   			AND E.EMP_CD = #{empCd, jdbcType=VARCHAR} -->
+<!--   			OR T.TRIP_SDATE = SYSDATE -->
+<!-- 	</select> -->
+	
+		<!-- [마이페이지] 조건 : SYSDATE 출장 전체조회  -->
+	<select id="mySelectBtrip" resultType="kr.or.ddit.businesstrip.vo.BusinessTripVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+	 SELECT ROWNUM AS RNUM
+	 			, TRIP_NO
+	    		, TRIP_DATE
+	    		, TRIP_PURPOSE
+	    		, TRIP_PLACE
+	    		, TRIP_SDATE
+	    		, TRIP_EDATE
+	            , T.DOC_NO
+	            , E.EMP_CD
+	            , E.EMP_NAME
+	            , CODE
+	    FROM EMPLOYEE E
+	    	INNER JOIN TRIP T ON(E.EMP_CD = T.EMP_CD)
+	    	INNER JOIN DOCUMENT DOC ON (T.DOC_NO = DOC.DOC_NO)
+		<![CDATA[  
+		    WHERE ROWNUM >= #{startRow} AND ROWNUM <= #{endRow}
+		]]>	   
+  			AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+  			OR EXTRACT(MONTH FROM T.TRIP_DATE) = EXTRACT(MONTH FROM SYSDATE)
+	</select>
+	
+	<!-- [마이페이지] 조건 : SYSDATE 출장일수  -->
+	<select id="mySelectCountBtrip" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) AS TRIP_COUNT
+		FROM EMPLOYEE E
+			 INNER JOIN TRIP T ON (E.EMP_CD = T.EMP_CD)
+			 WHERE EXTRACT(MONTH FROM T.TRIP_DATE) = EXTRACT(MONTH FROM SYSDATE)
+			 AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	</select>
+
+
+	<!-- 기안등록을 위한 출장등록-->
+	<insert id="insertBtripForDoc" parameterType="kr.or.ddit.businesstrip.vo.BusinessTripVO">
+		<selectKey order="BEFORE" keyProperty="tripNo" resultType="int">
+			SELECT BTRIP_SEQ.NEXTVAL AS tripNo FROM DUAL
+		</selectKey>
+		INSERT INTO TRIP (
+			TRIP_NO
+			,EMP_CD
+			,TRIP_DATE
+			,TRIP_PURPOSE
+			,TRIP_PLACE
+			,TRIP_SDATE
+			,TRIP_EDATE
+		) VALUES (
+			#{tripNo,jdbcType=NUMERIC}
+			, #{empCd,jdbcType=VARCHAR}
+			, #{tripDate,jdbcType=DATE}
+			, #{tripPurpose,jdbcType=VARCHAR}
+			, #{tripPlace,jdbcType=VARCHAR}
+			, #{tripSdate,jdbcType=DATE}
+			, #{tripEdate,jdbcType=DATE}
+		)
+	</insert>
+	
+	<!-- [마이페이지] 월출장일 총계  -->
+	<select id="totalBtrip" resultType="int" parameterType="kr.or.ddit.businesstrip.vo.BusinessTripVO">
+		SELECT COUNT(*)
+		FROM EMPLOYEE E
+			INNER JOIN TRIP T ON(E.EMP_CD = T.EMP_CD)
+	    WHERE E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+		AND EXTRACT(MONTH FROM T.TRIP_DATE) = EXTRACT(MONTH FROM SYSDATE)
+	</select>
+	
+	<!-- 승인후 캘린더에 넣기 위함 -->
+	<select id="selectBtripForCalendar" parameterType="kr.or.ddit.edDocument.vo.DocumentVO" resultType="kr.or.ddit.businesstrip.vo.BusinessTripVO" >
+		
+		SELECT
+		    TRIP_NO
+		  , EMP_CD
+		  , TRIP_DATE
+		  , TRIP_PURPOSE
+		  , TRIP_PLACE
+		  , TRIP_SDATE
+		  , TRIP_EDATE
+		  , DOC_NO
+		FROM
+		    TRIP
+		WHERE DOC_NO = #{docNo} 
+	
+	</select>
+	
+	
+</mapper>

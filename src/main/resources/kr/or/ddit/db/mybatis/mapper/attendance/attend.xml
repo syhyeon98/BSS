@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.attendance.dao.AttendanceDAO">
+	
+	<!-- 조건 : 인사부 직원이 현재날짜에 출퇴근한 직원 전체 조회 페이징을 위해 총 갯수 조회 -->
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM ATTENDANCE A
+			INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		        LEFT OUTER JOIN OVERTIME O ON (A.ATTE_NO = O.ATTE_NO)
+		        <include refid="searchFrag" />
+		        WHERE TRUNC(A.ATTE_DATE) = TRUNC(SYSDATE)
+	</select>
+	
+	<!-- 조건 : 일반 직원이 자신의 출퇴근 내역 전체 조회 페이징을 위해 총 갯수 조회 -->
+	<select id="totalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM ATTENDANCE A
+			INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		        LEFT OUTER JOIN OVERTIME O ON (A.ATTE_NO = O.ATTE_NO)
+		        WHERE E.EMP_CD = #{empCd, jdbcType=VARCHAR} 
+	</select>
+	
+	<!-- 조건 : 이번달 출퇴근 내역 전체 조회 페이징을 위해 총 갯수 조회 -->
+	<select id="thisMonthTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM ATTENDANCE A
+			INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		        WHERE TRUNC(A.ATTE_DATE, 'MM') = TRUNC(SYSDATE, 'MM')
+		           AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	</select>
+
+	<!-- 조건 : 전달 출퇴근 내역 전체 조회 페이징을 위해 총 갯수 조회 -->
+	<select id="beforeMonthTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM ATTENDANCE A
+			INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+				WHERE TRUNC(A.ATTE_DATE, 'MM') = TRUNC(ADD_MONTHS(SYSDATE, -1), 'MM')
+					AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	</select>
+	
+	
+	
+	<!-- 검색 조건 -->
+	<sql id="searchFrag">
+		<where>
+			<if test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'empName'">
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'empCd'">
+						INSTR(A.EMP_CD, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'atteDate'">
+						INSTR(A.ATTE_DATE, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(A.EMP_CD, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(A.ATTE_DATE, #{simpleCondition.searchWord} ) > 0
+					</otherwise>
+				</choose>
+			</if> 
+		</where>
+	</sql>
+	
+	<!-- 출퇴근, 직원, 부서, 초과근무 조인 출근일이 sysdate인 경우 조회  -->
+	<select id="selectAttendList" resultType="kr.or.ddit.attendance.vo.AttendanceVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		     , D.DEP_NAME
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT A.ATTE_NO
+		             , E.EMP_NAME
+		             , A.EMP_CD
+		             , A.ATTE_STIME
+		             , A.ATTE_END
+		             , A.ATTE_DATE
+		             , E.DEP_CD
+		             , O.OVER_START
+		             , O.OVER_END
+		             , O.OVER_CONT
+		        FROM ATTENDANCE A
+		        INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		        LEFT OUTER JOIN OVERTIME O ON (A.ATTE_NO = O.ATTE_NO)
+		        <include refid="searchFrag" />
+		        WHERE TRUNC(A.ATTE_DATE) = TRUNC(SYSDATE)
+		        ORDER BY A.ATTE_DATE DESC
+		    ) A
+		) B
+		INNER JOIN DEPARTMENT D ON (B.DEP_CD = D.DEP_CD)
+		<![CDATA[  
+		    WHERE RNUM >= #{startRow} AND RNUM <= #{endRow} 
+		]]>
+	</select>
+	
+	
+	<!-- 출근일, 이름, 부서로 검색 조회  -->
+	<select id="searchAttendList" resultType="kr.or.ddit.attendance.vo.AttendanceVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.* , D.DEP_NAME
+		FROM (
+		    SELECT ROWNUM RNUM, A.*
+		    FROM (
+		        SELECT A.ATTE_NO
+		             , E.EMP_NAME
+		             , A.EMP_CD
+		             , A.ATTE_STIME
+		             , A.ATTE_END
+		             , A.ATTE_DATE
+		             , E.DEP_CD
+		        FROM ATTENDANCE A
+		        INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		        <trim prefix="where" prefixOverrides="AND">
+			       	<if test="detailConditionVO != null">
+				       	<if test="detailConditionVO.atteDate != null" >
+					        AND A.ATTE_DATE = #{detailConditionVO.atteDate, jdbcType=DATE}
+					    </if>
+					    <if test="detailConditionVO.empName != null and !detailConditionVO.empName.isEmpty()">
+					        AND E.EMP_NAME = #{detailConditionVO.empName, jdbcType=VARCHAR}
+					    </if>
+		       		</if>
+		        </trim> 
+		        ORDER BY A.ATTE_NO DESC
+		    ) A
+		) B
+		INNER JOIN DEPARTMENT D ON (B.DEP_CD = D.DEP_CD)
+		<trim prefix="where">
+		<if test="detailConditionVO != null">
+		<if test="detailConditionVO.depName != null and !detailConditionVO.depName.isEmpty()">
+			D.DEP_NAME = #{detailConditionVO.depName, jdbcType=VARCHAR}
+		</if>
+		</if>
+		</trim>
+		<![CDATA[  
+		AND RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	
+	<!-- 출근 시간 등록  -->
+	<insert id="insertAttendStime" parameterType="kr.or.ddit.attendance.vo.AttendanceVO">
+		INSERT INTO ATTENDANCE
+			( ATTE_NO
+			, EMP_CD
+			, ATTE_STIME
+			, ATTE_DATE
+		) VALUES (
+			ATTEND_SEQ.NEXTVAL+500
+			, #{empCd, jdbcType=VARCHAR}
+			, SYSDATE
+			, TRUNC(SYSDATE)
+		)
+	</insert>
+	
+	<!-- 로그인한 직원 출근시간 값 있는지 조회 [출근] > [퇴근] -->
+	<select id="selectHaveAtteStime" parameterType="kr.or.ddit.attendance.vo.AttendanceVO" resultType="kr.or.ddit.attendance.vo.AttendanceVO">
+		SELECT ATTE_NO
+			, EMP_CD
+			, ATTE_STIME
+			, ATTE_END
+			, ATTE_DATE
+		FROM ATTENDANCE
+		WHERE EMP_CD = #{empCd, jdbcType=VARCHAR} AND ATTE_DATE = TO_DATE(SYSDATE,'YY/MM/DD')
+	</select>
+	
+	<!-- 로그인한 직원 퇴근시간 값 있는지 조회 -->
+	<select id="selectHaveAtteEnd" parameterType="kr.or.ddit.attendance.vo.AttendanceVO" resultType="kr.or.ddit.attendance.vo.AttendanceVO">
+		SELECT 
+			 ATTE_END
+		FROM ATTENDANCE
+		WHERE EMP_CD = #{empCd, jdbcType=VARCHAR} AND ATTE_DATE = TO_DATE(SYSDATE,'YY/MM/DD')
+	</select>
+	
+	<!-- 퇴근 시간 등록  -->
+	<update id="UpdateAttendEnd" parameterType="kr.or.ddit.attendance.vo.AttendanceVO">
+	  UPDATE ATTENDANCE
+      SET ATTE_END = SYSDATE
+      WHERE EMP_CD = #{empCd, jdbcType=VARCHAR}
+      AND ((ATTE_END IS NULL OR ATTE_END IS NOT NULL) AND ATTE_NO = #{atteNo, jdbcType=NUMERIC})
+	</update>
+	
+	<!-- 출근부 삭제  -->	
+	<delete id="deleteAttend" parameterType="kr.or.ddit.attendance.vo.AttendanceVO">
+		DELETE FROM ATTENDANCE
+		WHERE ATTE_NO = #{atteNo, jdbcType=NUMERIC}
+	</delete>
+	
+	<!-- 출근부 수정할 때 1개만 선택조회 모달에 뜨는 내용-->
+	<select id="selectOneAttend" parameterType="int" resultType="kr.or.ddit.attendance.vo.AttendanceVO">
+		SELECT ATTEVIEW.*
+				, D.DEP_NAME
+		FROM
+		( SELECT A.ATTE_NO
+			, E.EMP_NAME
+			, A.EMP_CD
+			, A.ATTE_STIME
+			, A.ATTE_END
+			, A.ATTE_DATE
+			, E.DEP_CD
+		FROM ATTENDANCE A
+			INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		WHERE A.ATTE_NO = #{atteNo, jdbcType=NUMERIC}
+		) ATTEVIEW
+			INNER JOIN DEPARTMENT D ON (ATTEVIEW.DEP_CD = D.DEP_CD)
+	</select>
+	
+	<!-- 출근부 수정 -->
+	<update id="updateAttend" parameterType="kr.or.ddit.attendance.vo.AttendanceVO">
+		UPDATE ATTENDANCE
+			SET ATTE_STIME = #{atteStime,jdbcType=TIMESTAMP}
+				, ATTE_END = #{atteEnd,jdbcType=TIMESTAMP}
+				, ATTE_DATE = #{atteDate,jdbcType=DATE}
+		WHERE ATTE_NO = #{atteNo, jdbcType=NUMERIC}
+	</update>
+	
+	<!-- 초과근무 등록할 때 1개만 선택조회 모달에 뜨는 내용  -->
+	<select id="selectOneOverTime"  parameterType="int" resultType="kr.or.ddit.attendance.vo.AttendanceVO">
+		SELECT ATTEVIEW.*, D.DEP_NAME
+		FROM (
+		    SELECT A.ATTE_NO, E.EMP_NAME, A.EMP_CD, A.ATTE_STIME, A.ATTE_END, A.ATTE_DATE, E.DEP_CD,
+		           O.OVER_START, O.OVER_END, O.OVER_CONT
+		    FROM ATTENDANCE A
+		    INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+		    LEFT OUTER JOIN OVERTIME O ON (A.ATTE_NO = O.ATTE_NO)
+		    WHERE A.ATTE_NO = #{atteNo, jdbcType=NUMERIC}
+		) ATTEVIEW
+		INNER JOIN DEPARTMENT D ON (ATTEVIEW.DEP_CD = D.DEP_CD)
+	</select>
+	
+	
+	<!-- [마이페이지] 로그인한 사람 출근내역 조회  -->
+	<select id="mypageAttend" resultType="kr.or.ddit.attendance.vo.AttendanceVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT ATTEVIEW.*
+			, ROWNUM RNUM
+			, D.DEP_NAME
+		FROM (
+			SELECT ROWNUM RNUM, B.*
+    		FROM
+    		( SELECT A.ATTE_NO
+				, E.EMP_NAME
+				, A.EMP_CD
+				, A.ATTE_STIME
+				, A.ATTE_END
+				, A.ATTE_DATE
+				, E.DEP_CD
+				, O.OVER_START
+			    , O.OVER_END
+			    , O.OVER_CONT
+			FROM ATTENDANCE A
+				INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+				 LEFT OUTER JOIN OVERTIME O ON (A.ATTE_NO = O.ATTE_NO)
+			WHERE E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+			ORDER BY A.ATTE_DATE DESC
+			) B 
+				) ATTEVIEW
+					INNER JOIN DEPARTMENT D ON (ATTEVIEW.DEP_CD = D.DEP_CD)
+					<![CDATA[  
+				   	 	WHERE RNUM >= #{startRow} AND RNUM <= #{endRow} 
+					]]>
+					ORDER BY ATTEVIEW.RNUM ASC
+	</select>
+	
+	<!-- [마이페이지] 이번달 출근 검색  -->
+	<select id="myAttendthisMonth" resultType="kr.or.ddit.attendance.vo.AttendanceVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.* , D.DEP_NAME
+			FROM (
+			    SELECT ROWNUM RNUM, A.*
+			    FROM (
+			        SELECT A.ATTE_NO
+			             , E.EMP_NAME
+			             , A.EMP_CD
+			             , A.ATTE_STIME
+			             , A.ATTE_END
+			             , A.ATTE_DATE
+			             , E.DEP_CD
+			        FROM ATTENDANCE A
+			        INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+			        WHERE TRUNC(A.ATTE_DATE, 'MM') = TRUNC(SYSDATE, 'MM')
+			           AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+			        ORDER BY A.ATTE_NO DESC
+			    ) A
+			) B
+			INNER JOIN DEPARTMENT D ON (B.DEP_CD = D.DEP_CD)		
+	</select>
+	
+	<!-- [마이페이지] 전 달 출근 검색  -->
+	<select id="myAttendbeforeMonth" resultType="kr.or.ddit.attendance.vo.AttendanceVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.* , D.DEP_NAME
+			FROM (
+			    SELECT ROWNUM RNUM, A.*
+			    FROM (
+			        SELECT A.ATTE_NO
+			             , E.EMP_NAME
+			             , A.EMP_CD
+			             , A.ATTE_STIME
+			             , A.ATTE_END
+			             , A.ATTE_DATE
+			             , E.DEP_CD
+			        FROM ATTENDANCE A
+			        INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+			        WHERE TRUNC(A.ATTE_DATE, 'MM') = TRUNC(ADD_MONTHS(SYSDATE, -1), 'MM')
+			           AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+			        ORDER BY A.ATTE_NO DESC
+			    ) A
+			) B
+			INNER JOIN DEPARTMENT D ON (B.DEP_CD = D.DEP_CD)	
+	</select>
+	
+	
+	<!-- 조건 : 클라이언트가 입력한 월에 따라 출근내역 총 갯수 조회 -->
+	<select id="inputTotalMonthRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM ATTENDANCE A
+			INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+				WHERE TO_CHAR(A.ATTE_DATE, 'YYYY-MM') = #{detailConditionVO.atteMonth, jdbcType=DATE}
+					AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+	    ORDER BY A.ATTE_NO DESC
+	</select>
+	
+	<!-- [마이페이지] 클라이언트가 입력한 월에 따라 출근내역 조회  -->
+	<select id="inputMonthAttend" resultType="kr.or.ddit.attendance.vo.AttendanceVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT ROWNUM RNUM, ATTEVIEW.*
+		FROM (
+			SELECT A.ATTE_NO
+				, E.EMP_NAME
+				, A.EMP_CD
+				, A.ATTE_STIME
+				, A.ATTE_END
+				, A.ATTE_DATE
+			FROM ATTENDANCE A
+				INNER JOIN EMPLOYEE E ON (A.EMP_CD = E.EMP_CD)
+					WHERE TO_CHAR(A.ATTE_DATE, 'YYYY-MM') = #{detailConditionVO.atteMonth, jdbcType=DATE}
+						AND E.EMP_CD = #{empCd, jdbcType=VARCHAR}
+						 ORDER BY A.ATTE_NO DESC
+				) ATTEVIEW
+					<![CDATA[  
+				   	 	WHERE ROWNUM >= #{startRow} AND ROWNUM <= #{endRow} 
+					]]>
+	</select>
+	
+</mapper>

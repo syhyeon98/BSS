@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.papers.dao.PapersDAO">
+	<!-- 이수증 출력 -->
+	<select id="selectMyTrainForPaper" resultType="kr.or.ddit.training.vo.TrainingVO" parameterType="kr.or.ddit.employee.vo.EmployeeVO">	
+		SELECT A.*,
+			<![CDATA[
+			CASE WHEN SYSDATE < TRAIN_DATE THEN '신청' ELSE '완료' END AS appCheck
+			]]>
+		FROM (
+		    SELECT ROW_NUMBER() OVER (ORDER BY TRAIN_DATE DESC) AS RNUM,
+		           TA.EMP_CD,
+		           T.TRAIN_NO,
+		           T.TRAIN_NAME,
+		           T.LECTOR_ID,
+		           L.LECTOR_NAME,
+		           T.TRAIN_DATE,
+		           T.TRAIN_TIME,
+		           T.TRAIN_PLACE,
+		           T.TRAIN_PERIOD,
+		           TA.TA_DATE,
+		           T.TRAIN_TARGET,
+		           T.TRAIN_CONTENT,
+		           T.CODE
+		    FROM TRAINING T
+		    LEFT OUTER JOIN LECTOR L ON(T.LECTOR_ID = L.LECTOR_ID)
+		    INNER JOIN TRALINING_APPLICATION TA ON (T.TRAIN_NO = TA.TRAIN_NO)
+		    WHERE TA.EMP_CD = #{empCd,jdbcType=VARCHAR} AND T.TRAIN_NO = #{trainNo,jdbcType=NUMERIC}
+		) A
+	</select>
+</mapper>

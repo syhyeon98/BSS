@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.finapi.dao.RentHouseLoanDAO">
+	
+	
+	<select id="selectOptionLendRateTypeList" resultType="kr.or.ddit.finapi.vo.RentHouseLoanOptionVO">
+		SELECT DISTINCT LEND_RATE_TYPE, LEND_RATE_TYPE_NM FROM RENT_HOUSE_LOAN_OPTION
+	</select>
+	
+		<sql id="searchFrag">
+		<where>
+			<choose>
+				<when
+					test="detailCondition.areaCd neq null and not detailCondition.areaCd.isEmpty()">
+					B.KOR_CO_NM IN (
+					SELECT KOR_CO_NM
+					FROM BANK B
+					INNER JOIN BANK_OPTION BO ON (B.FIN_CO_NO = BO.FIN_CO_NO)
+					<if
+						test="detailCondition.areaCd neq null and not detailCondition.areaCd.isEmpty()">
+						<foreach collection="detailCondition.areaCd" index="idx"
+							item="areaCd" separator="OR" open="WHERE">
+							AREA_CD = #{areaCd}
+						</foreach>
+						AND EXIS_YN='Y'
+					</if>
+					)
+				</when>
+				<otherwise>
+					B.KOR_CO_NM IN (
+					SELECT KOR_CO_NM
+					FROM BANK B
+					INNER JOIN BANK_OPTION BO ON (B.FIN_CO_NO = BO.FIN_CO_NO))
+				</otherwise>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.topFinGrpNo neq null and not detailCondition.topFinGrpNo.isEmpty()">
+					AND TOP_FIN_GRP_NO=#{detailCondition.topFinGrpNo}
+				</when>
+			</choose>
+			<choose>
+				<when test="detailCondition.rpayType neq null and not detailCondition.rpayType.isEmpty()">
+					AND RPAY_TYPE=#{detailCondition.rpayType}
+				</when>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.lendRateType neq null and not detailCondition.lendRateType.isEmpty()">
+					AND LEND_RATE_TYPE=#{detailCondition.lendRateType}
+				</when>
+			</choose>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'korCoNm'">
+						AND INSTR(KOR_CO_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'finPrdtNm'">
+						AND INSTR(FIN_PRDT_NM,#{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						AND (INSTR(KOR_CO_NM, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(FIN_PRDT_NM, #{simpleCondition.searchWord} ) > 0)
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+	
+	<select id="selectTotalRecord"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="long">
+		SELECT COUNT(*)
+		FROM BANK B
+		INNER JOIN RENT_HOUSE_LOAN HL
+			ON(B.FIN_CO_NO=HL.FIN_CO_NO)
+		INNER JOIN RENT_HOUSE_LOAN_OPTION HLO
+			ON(HL.FIN_PRDT_CD = HLO.FIN_PRDT_CD AND HL.DCLS_MONTH = HLO.DCLS_MONTH AND HL.FIN_CO_NO = HLO.FIN_CO_NO)
+		<include refid="searchFrag" />
+	</select>
+	
+		<select id="selectRentHouseLoanList"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo"
+		resultType="kr.or.ddit.finapi.vo.RentHouseLoanVO">
+		SELECT C.*
+			FROM (
+			    SELECT ROWNUM RNUM
+			    	       ,A.FIN_CO_NO
+			               ,A.KOR_CO_NM
+			               ,A.DCLS_MONTH
+			               ,A.DCLS_CHRG_MAN 
+			               ,A.HOMP_URL 
+			               ,A.CAL_TEL
+			               ,A.FIN_PRDT_CD 
+			               ,A.FIN_PRDT_NM 
+			               ,A.JOIN_WAY
+			               ,A.DCLS_STRT_DAY 
+			               ,A.DCLS_END_DAY
+			               ,A.FIN_CO_SUBM_DAY 
+			               ,A.LOAN_INCI_EXPN
+			               ,A.TOP_FIN_GRP_NO
+		                   ,A.ERLY_RPAY_FEE
+		                   ,A.DLY_RATE
+		                   ,A.LOAN_LMT
+			               ,A.RPAY_TYPE
+			               ,A.LEND_RATE_TYPE
+		                   ,A.RPAY_TYPE_NM
+		                   ,A.LEND_RATE_TYPE_NM
+		                   ,A.LEND_RATE_MIN
+		                   ,A.LEND_RATE_MAX
+		                   ,A.LEND_RATE_AVG
+			    FROM (
+			        SELECT B.FIN_CO_NO
+			               ,B.KOR_CO_NM
+			               ,B.DCLS_MONTH
+			               ,B.DCLS_CHRG_MAN 
+			               ,B.HOMP_URL 
+			               ,B.CAL_TEL
+			               ,HL.FIN_PRDT_CD 
+			               ,HL.FIN_PRDT_NM 
+			               ,HL.JOIN_WAY
+			               ,HL.DCLS_STRT_DAY 
+			               ,HL.DCLS_END_DAY
+			               ,HL.FIN_CO_SUBM_DAY 
+			               ,HL.LOAN_INCI_EXPN
+			               ,HL.TOP_FIN_GRP_NO
+		                   ,HL.ERLY_RPAY_FEE
+		                   ,HL.DLY_RATE
+		                   ,HL.LOAN_LMT
+			               ,HLO.RPAY_TYPE
+			               ,HLO.LEND_RATE_TYPE
+		                   ,HLO.RPAY_TYPE_NM
+		                   ,HLO.LEND_RATE_TYPE_NM
+		                   ,HLO.LEND_RATE_MIN
+		                   ,HLO.LEND_RATE_MAX
+		                   ,HLO.LEND_RATE_AVG
+				FROM BANK B
+				INNER JOIN RENT_HOUSE_LOAN HL ON (B.FIN_CO_NO = HL.FIN_CO_NO)
+				INNER JOIN RENT_HOUSE_LOAN_OPTION HLO ON (HL.FIN_PRDT_CD = HLO.FIN_PRDT_CD AND HL.DCLS_MONTH = HLO.DCLS_MONTH AND HL.FIN_CO_NO = HLO.FIN_CO_NO)
+				<include refid="searchFrag" />
+				ORDER BY TOP_FIN_GRP_NO ASC, LEND_RATE_AVG DESC
+				) A
+				) C
+				<![CDATA[  
+					WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+				]]>
+	</select>
+	
+	<select id="selectRentHouseLoan" parameterType="kr.or.ddit.finapi.vo.RentHouseLoanVO" resultType="kr.or.ddit.finapi.vo.RentHouseLoanVO">
+       		SELECT 
+			B.FIN_CO_NO
+	               ,B.KOR_CO_NM
+	               ,B.DCLS_MONTH
+	               ,B.DCLS_CHRG_MAN 
+	               ,B.HOMP_URL 
+	               ,B.CAL_TEL
+	               ,HL.FIN_PRDT_CD 
+	               ,HL.FIN_PRDT_NM 
+	               ,HL.JOIN_WAY
+	               ,HL.DCLS_STRT_DAY 
+	               ,HL.DCLS_END_DAY
+	               ,HL.FIN_CO_SUBM_DAY 
+	               ,HL.LOAN_INCI_EXPN
+	               ,HL.TOP_FIN_GRP_NO
+                   ,HL.ERLY_RPAY_FEE
+                   ,HL.DLY_RATE
+                   ,HL.LOAN_LMT
+	               ,HLO.RPAY_TYPE
+	               ,HLO.LEND_RATE_TYPE
+                   ,HLO.RPAY_TYPE_NM
+                   ,HLO.LEND_RATE_TYPE_NM
+                   ,HLO.LEND_RATE_MIN
+                   ,HLO.LEND_RATE_MAX
+                   ,HLO.LEND_RATE_AVG
+		FROM RENT_HOUSE_LOAN HL
+		INNER JOIN RENT_HOUSE_LOAN_OPTION HLO
+			ON(HL.FIN_PRDT_CD = HLO.FIN_PRDT_CD AND HL.DCLS_MONTH=HLO.DCLS_MONTH AND HL.FIN_CO_NO=HLO.FIN_CO_NO)
+		INNER JOIN BANK B 
+			ON(HL.FIN_CO_NO=B.FIN_CO_NO)
+		WHERE HL.FIN_PRDT_CD  = #{finPrdtCd}
+        		AND HL.FIN_CO_NO=#{finCoNo}
+                AND RPAY_TYPE=#{rpayType}
+                AND LEND_RATE_TYPE=#{lendRateType}
+	</select>
+
+</mapper>

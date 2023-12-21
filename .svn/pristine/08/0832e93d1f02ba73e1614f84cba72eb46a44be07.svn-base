@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.salary.dao.SalaryDAO">
+	
+	<insert id="insertSalary">
+		INSERT INTO salary (sal_no, emp_cd, SAL_CALC_YN, SAL_CALC_YMD, SAL_CALC_START, SAL_CALC_END)
+		SELECT TO_CHAR(SYSDATE,'YYYYMM'), emp_cd, 'N', SYSDATE
+		, TRUNC(ADD_MONTHS(SYSDATE,-1), 'MM')
+		, ADD_MONTHS(LAST_DAY(SYSDATE),-1)
+		FROM employee
+	</insert>
+	
+	<!-- 기존기준일 -->
+<!-- 	<insert id="insertSalary"> -->
+<!-- 		INSERT INTO salary (sal_no, emp_cd, SAL_CALC_YN, SAL_CALC_YMD, SAL_CALC_START, SAL_CALC_END) -->
+<!-- 		SELECT TO_CHAR(SYSDATE,'YYYYMM'), emp_cd, 'N', SYSDATE -->
+<!-- 		, TO_CHAR(ADD_MONTHS(SYSDATE,-1),'YYYY/MM')||'/'||25 -->
+<!-- 		, TO_CHAR(SYSDATE,'YYYY/MM')||'/'||24 -->
+<!-- 		FROM employee -->
+<!-- 	</insert> -->
+	
+	<select id="salaryList" resultType="kr.or.ddit.salary.vo.SalaryVO">
+		SELECT DISTINCT(SAL_NO), SAL_CALC_YN,SAL_CALC_YMD,SAL_CALC_START,SAL_CALC_END,GIVE_YMD
+		FROM SALARY INNER JOIN SALARY_DETAIL USING(SAL_NO)
+		ORDER BY SAL_NO DESC
+	</select>
+<!-- 	<select id="salaryList" resultType="kr.or.ddit.salary.vo.SalaryVO"> -->
+<!-- 		SELECT DISTINCT(SAL_NO), SAL_CALC_YN,SAL_CALC_YMD,SAL_CALC_START,SAL_CALC_END -->
+<!-- 		FROM SALARY -->
+<!-- 		ORDER BY SAL_NO DESC -->
+<!-- 	</select> -->
+	
+	<select id="salaryPersonalList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.salary.vo.SalaryVO">
+		SELECT DISTINCT(SAL_NO), SAL_CALC_YN,SAL_CALC_YMD,SAL_CALC_START,SAL_CALC_END,GIVE_YMD
+		FROM SALARY
+        INNER JOIN SALARY_DETAIL USING(SAL_NO)
+		WHERE SALARY.EMP_CD=#{empCd}
+		ORDER BY SAL_NO DESC
+	</select>	
+	
+	
+	<select id="checkBeforeInsert" resultType="kr.or.ddit.salary.vo.SalaryVO">
+		SELECT SAL_NO
+		FROM SALARY
+		WHERE SAL_NO = TO_CHAR(SYSDATE,'YYYYMM')
+	</select>
+	
+	<delete id="deleteSalary" parameterType="kr.or.ddit.salary.vo.SalaryVO">
+		DELETE SALARY
+		WHERE SAL_NO=#{salNo}
+	</delete>
+	
+	<update id="updateSalary" parameterType="kr.or.ddit.salary.vo.SalaryVO">
+		UPDATE 
+		(SELECT * FROM SALARY WHERE SAL_NO=#{salNo})
+		SET  SAL_CALC_YN=
+		CASE
+		    WHEN SAL_CALC_YN = 'Y' THEN 'N'
+		ELSE 'Y'
+		END
+	</update>
+	
+	
+</mapper>

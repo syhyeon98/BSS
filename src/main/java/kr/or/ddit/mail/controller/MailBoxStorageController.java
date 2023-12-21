@@ -1,0 +1,155 @@
+package kr.or.ddit.mail.controller;
+
+import java.security.Principal;
+import java.util.List;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import kr.or.ddit.employee.vo.EmployeeVO;
+import kr.or.ddit.employee.vo.EmployeeVOWrapper;
+import kr.or.ddit.mail.service.MailBoxService;
+import kr.or.ddit.mail.vo.MailBoxVO;
+import kr.or.ddit.pagingVO.PaginationInfo;
+import kr.or.ddit.pagingVO.SimpleCondition;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+@Controller
+@RequestMapping("/mailBox/")
+public class MailBoxStorageController {
+	private final MailBoxService service;
+	
+	/**
+	 * 받은메일함
+	 * @return
+	 */
+	@RequestMapping("receiveList.do")
+	public String recieveList(
+			Model model
+			, @RequestParam(name = "page", required = false, defaultValue = "1") long currentPage
+			, @ModelAttribute("simpleCondition") SimpleCondition simpleCondition
+			, Authentication authenticationn
+			) {
+		PaginationInfo<MailBoxVO> paging = new PaginationInfo<>();
+		paging.setCurrentPage(currentPage);
+		paging.setSimpleCondition(simpleCondition);
+		
+		EmployeeVOWrapper wrapper = (EmployeeVOWrapper) authenticationn.getPrincipal();
+		EmployeeVO employee = wrapper.getRealUser();
+		MailBoxVO mailBox = new MailBoxVO();
+		
+		String empCd = employee.getEmpCd();
+
+		mailBox.setLoginEmpCd(empCd);
+		mailBox.setLoginEmpMail(employee.getEmpMail());
+
+		List<MailBoxVO> recieveMailList = service.retriveGetMailList(empCd, paging);
+		paging.setDataList(recieveMailList);
+
+		model.addAttribute("paging", paging);
+
+		return "mail/receive/testReceiveList";
+	}
+	
+	/**
+	 * 보낸 메일함
+	 * @return
+	 */
+	@RequestMapping("sendList.do")
+	public String sendList(Model model
+			, Principal principal
+			, @RequestParam(name = "page", required = false, defaultValue = "1") long currentPage
+			, @ModelAttribute("simpleCondition") SimpleCondition simpleCondition
+			) {
+		PaginationInfo<MailBoxVO> paging = new PaginationInfo<>();
+		paging.setCurrentPage(currentPage);
+		paging.setSimpleCondition(simpleCondition);
+		
+		String empId = principal.getName();
+		
+		List<MailBoxVO> sendMailList = service.retriveSendMailList(empId, paging);
+		paging.setDataList(sendMailList);
+		
+		model.addAttribute("paging", paging);
+
+		return "mail/send/testSendList";
+	}
+	
+	/**
+	 * 내게쓴 메일함
+	 * @return
+	 */
+	@RequestMapping("tomeList.do")
+	public String tomeList(Model model, Principal principal
+			, @RequestParam(name = "page", required = false, defaultValue = "1") long currentPage
+			, @ModelAttribute("simpleCondition") SimpleCondition simpleCondition
+			) {
+		PaginationInfo<MailBoxVO> paging = new PaginationInfo<>();
+		paging.setCurrentPage(currentPage);
+		paging.setSimpleCondition(simpleCondition);
+		
+		String empCd = principal.getName();
+		List<MailBoxVO> toMeList = service.toMeList(empCd, paging);
+		paging.setDataList(toMeList);
+		
+		model.addAttribute("paging", paging);
+		
+		return "mail/tome/testTomeList";
+	}
+
+	@RequestMapping("toMeView.do")
+	public String tomeView(@RequestParam(name = "mailNo", required = true) String mailNo, Model model,
+				Authentication authentication
+			) {
+		MailBoxVO mail = service.retriveMailDetail(mailNo);
+		EmployeeVOWrapper wrapper = (EmployeeVOWrapper) authentication.getPrincipal();
+		String empMail = wrapper.getRealUser().getEmpMail();
+		model.addAttribute("empMail", empMail);
+		
+		model.addAttribute("mail", mail);
+		
+		return "mail/allMail/mailDetail";
+	}
+	
+	/**
+	 * 보낸 메일함 상세조회
+	 * @return
+	 */
+	@RequestMapping("sendView.do")
+	public String sendView(@RequestParam(name = "mailNo", required = true) String mailNo, Model model,
+				Authentication authentication
+			) {
+		MailBoxVO mail = service.retriveMailDetail(mailNo);
+		EmployeeVOWrapper wrapper = (EmployeeVOWrapper) authentication.getPrincipal();
+		String empMail = wrapper.getRealUser().getEmpMail();
+		model.addAttribute("empMail", empMail);
+
+		model.addAttribute("mail", mail);
+
+		return "mail/allMail/mailDetail";
+	}
+
+	/**
+	 * 받은 메일함 상세조회
+	 * @param mailNo
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("receiveView.do")
+	public String reciveView(@RequestParam(name = "mailNo", required = true) String mailNo, Model model,
+			Authentication authentication) {
+		MailBoxVO mail = service.retriveMailDetail(mailNo);
+		EmployeeVOWrapper wrapper = (EmployeeVOWrapper) authentication.getPrincipal();
+		String empMail = wrapper.getRealUser().getEmpMail();
+		model.addAttribute("empMail", empMail);
+
+		model.addAttribute("mail", mail);
+
+		return "mail/allMail/mailDetail";
+	}
+}

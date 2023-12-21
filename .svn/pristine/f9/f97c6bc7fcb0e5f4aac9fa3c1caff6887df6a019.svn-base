@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.finapi.dao.SavingPrdtDAO">
+
+	<sql id="searchFrag">
+		<where>
+			<choose>
+				<when
+					test="detailCondition.areaCd neq null and not detailCondition.areaCd.isEmpty()">
+					B.KOR_CO_NM IN (
+					SELECT KOR_CO_NM
+					FROM BANK B
+					INNER JOIN BANK_OPTION BO ON (B.FIN_CO_NO = BO.FIN_CO_NO)
+					<if
+						test="detailCondition.areaCd neq null and not detailCondition.areaCd.isEmpty()">
+						<foreach collection="detailCondition.areaCd" index="idx"
+							item="areaCd" separator="OR" open="WHERE">
+							AREA_CD = #{areaCd}
+						</foreach>
+						AND EXIS_YN='Y'
+					</if>
+					)
+				</when>
+				<otherwise>
+					B.KOR_CO_NM IN (
+					SELECT KOR_CO_NM
+					FROM BANK B
+					INNER JOIN BANK_OPTION BO ON (B.FIN_CO_NO = BO.FIN_CO_NO))
+				</otherwise>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.saveTrm neq null and not detailCondition.saveTrm.isEmpty()">
+					AND SAVE_TRM=#{detailCondition.saveTrm}
+				</when>
+				<otherwise>
+					AND SAVE_TRM='12'
+				</otherwise>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.topFinGrpNo neq null and not detailCondition.topFinGrpNo.isEmpty()">
+					AND TOP_FIN_GRP_NO=#{detailCondition.topFinGrpNo}
+				</when>
+			</choose>
+			<choose>
+				<when test="detailCondition.rsrvType neq null and not detailCondition.rsrvType.isEmpty()">
+					AND RSRV_TYPE=#{detailCondition.rsrvType}
+				</when>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.intrRateType neq null and not detailCondition.intrRateType.isEmpty()">
+					AND INTR_RATE_TYPE=#{detailCondition.intrRateType}
+				</when>
+			</choose>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'korCoNm'">
+						AND INSTR(KOR_CO_NM, #{simpleCondition.searchWord}
+						) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'finPrdtNm'">
+						AND INSTR(FIN_PRDT_NM,
+						#{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						AND (INSTR(KOR_CO_NM, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(FIN_PRDT_NM, #{simpleCondition.searchWord} ) > 0)
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="long">
+		SELECT COUNT(*)
+		FROM BANK B
+		INNER JOIN SAVING_PRDT SP
+			ON(B.FIN_CO_NO=SP.FIN_CO_NO)
+		INNER JOIN SAVING_PRDT_OPTION SPO 
+			ON(SP.FIN_PRDT_CD = SPO.FIN_PRDT_CD AND SP.DCLS_MONTH = SPO.DCLS_MONTH AND SP.FIN_CO_NO = SPO.FIN_CO_NO)
+		<include refid="searchFrag" />
+	</select>
+
+	<select id="selectSavingPrdtList"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo"
+		resultType="kr.or.ddit.finapi.vo.SavingPrdtVO">
+	SELECT C.*
+	FROM (
+	    SELECT ROWNUM RNUM
+	    	   , A.FIN_CO_NO
+	           ,A.KOR_CO_NM
+	           ,A.DCLS_MONTH
+	           ,A.DCLS_CHRG_MAN
+	           ,A.HOMP_URL
+	           ,A.CAL_TEL
+	           ,A.FIN_PRDT_CD
+	           ,A.FIN_PRDT_NM
+	           ,A.JOIN_WAY
+	           ,A.MTRT_INT
+	           ,A.SPCL_CND
+	           ,A.JOIN_DENY
+	           ,A.ETC_NOTE
+	           ,A.MAX_LIMIT
+	           ,A.DCLS_STRT_DAY 
+	           ,A.DCLS_END_DAY
+	           ,A.FIN_CO_SUBM_DAY
+	           ,A.JOIN_MEMBER
+	           ,A.TOP_FIN_GRP_NO
+	           ,A.SAVE_TRM 
+	           ,A.INTR_RATE_TYPE 
+	           ,A.INTR_RATE_TYPE_NM
+	           ,A.INTR_RATE 
+	           ,A.INTR_RATE2
+               ,A.RSRV_TYPE_NM
+               ,A.RSRV_TYPE
+	    FROM (
+	        SELECT B.FIN_CO_NO
+	               ,B.KOR_CO_NM
+	               ,B.DCLS_MONTH
+	               ,B.DCLS_CHRG_MAN 
+	               ,B.HOMP_URL 
+	               ,B.CAL_TEL
+	               ,SP.FIN_PRDT_CD 
+	               ,SP.FIN_PRDT_NM 
+	               ,SP.JOIN_WAY
+	               ,SP.MTRT_INT 
+	               ,SP.SPCL_CND 
+	               ,SP.JOIN_DENY 
+	               ,SP.ETC_NOTE
+	               ,SP.MAX_LIMIT 
+	               ,SP.DCLS_STRT_DAY 
+	               ,SP.DCLS_END_DAY
+	               ,SP.FIN_CO_SUBM_DAY 
+	               ,SP.JOIN_MEMBER 
+	               ,SP.TOP_FIN_GRP_NO
+	               ,SPO.SAVE_TRM 
+	               ,SPO.INTR_RATE_TYPE 
+	               ,SPO.INTR_RATE_TYPE_NM
+	               ,SPO.INTR_RATE 
+	               ,SPO.INTR_RATE2
+                   ,SPO.RSRV_TYPE_NM
+                   ,SPO.RSRV_TYPE
+		FROM BANK B
+		INNER JOIN SAVING_PRDT SP ON (B.FIN_CO_NO = SP.FIN_CO_NO)
+		INNER JOIN SAVING_PRDT_OPTION SPO ON (SP.FIN_PRDT_CD = SPO.FIN_PRDT_CD AND
+		SP.DCLS_MONTH = SPO.DCLS_MONTH AND SP.FIN_CO_NO = SPO.FIN_CO_NO)
+		<include refid="searchFrag" />
+		ORDER BY TOP_FIN_GRP_NO ASC
+		) A
+		) C
+		<![CDATA[  
+			WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+		]]>
+	</select>
+	
+		<select id="selectSavingPrdt" parameterType="kr.or.ddit.finapi.vo.SavingPrdtVO" resultType="kr.or.ddit.finapi.vo.SavingPrdtVO">
+			SELECT 
+			SP.FIN_PRDT_CD
+			, SP.DCLS_MONTH
+			, SP.FIN_CO_NO
+			, SP.FIN_PRDT_NM
+			, JOIN_WAY
+			, MTRT_INT
+			, SPCL_CND
+			, JOIN_DENY
+			, ETC_NOTE
+			, MAX_LIMIT
+			, DCLS_STRT_DAY
+			, DCLS_END_DAY
+			, FIN_CO_SUBM_DAY
+			, JOIN_MEMBER
+			, TOP_FIN_GRP_NO
+			,SAVE_TRM
+			, INTR_RATE_TYPE
+			, INTR_RATE_TYPE_NM
+			, INTR_RATE
+			, INTR_RATE2
+			,KOR_CO_NM
+			, DCLS_CHRG_MAN
+			, HOMP_URL
+			, CAL_TEL
+            , RSRV_TYPE
+            , RSRV_TYPE_NM
+		FROM SAVING_PRDT SP
+		INNER JOIN SAVING_PRDT_OPTION SPO
+			ON(SP.FIN_PRDT_CD = SPO.FIN_PRDT_CD AND SP.DCLS_MONTH=SPO.DCLS_MONTH AND SP.FIN_CO_NO=SPO.FIN_CO_NO)
+		INNER JOIN BANK B 
+			ON(SP.FIN_CO_NO=B.FIN_CO_NO)
+		WHERE SP.FIN_PRDT_CD  = #{finPrdtCd}
+        		AND SP.FIN_CO_NO=#{finCoNo}
+        		AND RSRV_TYPE=#{rsrvType}
+	      	<choose>
+	      		<when test="saveTrm neq null and saveTrm neq null ">
+					AND SAVE_TRM=#{saveTrm}		        			
+	      		</when>
+	      		<otherwise>
+	      			AND  SAVE_TRM='12'
+	      		</otherwise>
+	     	</choose>
+	      	<choose>
+	      		<when test="intrRateType neq null and intrRateType neq null and not intrRateType.isEmpty()">
+					AND SPO.INTR_RATE_TYPE=#{intrRateType}	        			
+	      		</when>
+	      		<otherwise>
+	      			AND SPO.INTR_RATE_TYPE='S'
+	      		</otherwise>
+	     	</choose>
+	</select>
+
+</mapper>

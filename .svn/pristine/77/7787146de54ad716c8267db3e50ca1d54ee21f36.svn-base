@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.university.dao.UniversityDAO">
+	
+	<insert id="insertUniversity" parameterType="kr.or.ddit.university.vo.UniversityVO">
+	 <selectKey order="BEFORE" keyProperty="empCd" resultType="string">
+        SELECT emp_cd 
+		FROM  EMPLOYEE
+		WHERE EMP_CD=(SELECT TO_CHAR(SYSDATE, 'YYMM') || LPAD(TO_NUMBER(MAX(SUBSTR(emp_cd,5))), 3, '0')
+		FROM EMPLOYEE)
+    </selectKey>
+	insert into university
+	(emp_cd, uni_name, uni_major, uni_degree, uni_start, uni_end, code)
+	values(
+	#{empCd,jdbcType=VARCHAR}
+	, #{uniName,jdbcType=VARCHAR}
+	, #{uniMajor,jdbcType=VARCHAR}
+	, #{uniDegree,jdbcType=VARCHAR}
+	, #{uniStart,jdbcType=DATE}
+	, #{uniEnd,jdbcType=DATE}
+	, #{code,jdbcType=VARCHAR}
+	)
+	</insert>
+</mapper>

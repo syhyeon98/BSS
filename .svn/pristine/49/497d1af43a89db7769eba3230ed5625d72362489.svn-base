@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.salary.dao.AllowDAO">
+	
+	<select id="selectAllowList">
+		SELECT ALLOW_CD, ALLOW_CRTR, ALLOW_NM, ALLOW_CALC
+		FROM ALLOW
+		WHERE ALLOW_USE ='Y'
+		ORDER BY ALLOW_CD ASC
+	</select>
+	
+	<select id="selectAllow" resultType="kr.or.ddit.salary.vo.AllowVO">
+		SELECT ALLOW_CD, ALLOW_CRTR, ALLOW_NM ,ALLOW_CALC
+		FROM ALLOW
+		WHERE ALLOW_CD= #{allowCd,jdbcType=CHAR}
+	</select>
+	
+	<insert id="insertAllow" parameterType="kr.or.ddit.salary.vo.AllowVO">
+		<selectKey order="BEFORE" keyProperty="allowCd" resultType="string">
+			SELECT LPAD(NVL(MAX(ALLOW_CD),0)+1,3,'0') 
+			FROM ALLOW
+		</selectKey>
+		INSERT INTO ALLOW(ALLOW_CD,ALLOW_NM,ALLOW_CRTR,ALLOW_CALC)
+		VALUES(
+			 #{allowCd,jdbcType=CHAR}
+			,#{allowNm,jdbcType=VARCHAR}
+			,#{allowCrtr,jdbcType=VARCHAR}
+			,#{allowCalc,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<delete id="deleteAllow" parameterType="string">
+<!-- 		DELETE  -->
+<!-- 		FROM ALLOW  -->
+<!-- 		WHERE ALLOW_CD=#{allowCd}  -->
+		UPDATE ALLOW
+		SET ALLOW_USE='N'
+		WHERE ALLOW_CD=#{allowCd}
+	</delete>
+	
+	<update id="updateAllow" parameterType="kr.or.ddit.salary.vo.AllowVO">
+		UPDATE ALLOW 
+		SET ALLOW_NM=#{allowNm,jdbcType=VARCHAR} , ALLOW_CRTR=#{allowCrtr,jdbcType=VARCHAR}, ALLOW_CALC=#{allowCalc,jdbcType=VARCHAR}
+		WHERE ALLOW_CD=#{allowCd,jdbcType=CHAR}
+	</update>
+
+</mapper>

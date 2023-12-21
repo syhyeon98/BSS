@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.atch.dao.AtchFileDAO">
+
+	<select id="deleteAtchFileDetails"
+		parameterType="kr.or.ddit.atch.vo.AtchFileDetailVO"
+		resultType="kr.or.ddit.atch.vo.AtchFileDetailVO">
+		select OUT_ATCH_CD
+		, ATCH_NO
+		, OUT_ATCH_DT
+		, OUT_ATCH_AT
+		, OUT_STAR_COURS
+		, OUT_ATCH_NM
+		, OUT_ORIGIN_NM
+		, OUT_ATCH_CN
+		, OUT_ATCH_SIZE
+		, OUT_ATCH_EXIST
+		, OUT_FILE_NO
+		from out_atch
+		where OUT_ATCH_CD #{outAtchNo}= and ATCH_NO =#{atchNo}
+	</select>
+	
+	<resultMap type="kr.or.ddit.atch.vo.AtchFileVO" id="atchFileMap">
+		<id property="atchNo" column="A_NO"/>
+		<result property="atchDt" column="ATCH_DT"/>
+		<result property="atchAt" column="ATCH_AT"/> 
+		<collection property="detailList" ofType="kr.or.ddit.atch.vo.AtchFileDetailVO" autoMapping="true">
+			<id property="atchNo" column="B_NO"/>
+			<id property="outAtchCd" column="OUT_ATCH_CD"/>
+		</collection>
+	</resultMap>
+	
+	<select id="selectAtchFileGroup" parameterType="int" resultMap="atchFileMap">
+		SELECT 
+		A.ATCH_NO A_NO
+		, B.ATCH_NO B_BO
+		, OUT_ATCH_CD
+		, OUT_STAR_COURS
+		, OUT_ATCH_NM
+		, OUT_ORIGIN_NM
+		, OUT_ATCH_EXIST
+		, OUT_FILE_NO
+		, OUT_ATCH_SIZE
+		, OUT_ATCH_DT
+		, OUT_ATCH_AT
+		FROM
+		ATCH A LEFT OUTER JOIN OUT_ATCH B 
+		ON (A.ATCH_NO = B.ATCH_NO)
+		WHERE A.ATCH_NO = #{atchNo}
+	</select>
+	
+	<insert id="insertAtchFileGroup" parameterType="kr.or.ddit.atch.vo.AtchFileVO">
+		<selectKey order="BEFORE" resultType="int" keyProperty="atchNo">
+			SELECT ATCH_NO_SEQ.NEXTVAL
+			FROM DUAL
+		</selectKey>
+		INSERT ALL 
+		INTO ATCH (ATCH_NO, ATCH_DT, ATCH_AT)
+		VALUES(#{atchNo}, SYSDATE, 'Y')
+		<foreach collection="detailList" item="atch" index="idx">
+			INTO OUT_ATCH (
+			ATCH_NO
+			, OUT_ATCH_CD
+			, OUT_ATCH_DT
+			, OUT_ATCH_AT
+			, OUT_STAR_COURS
+			, OUT_ATCH_NM
+			, OUT_ORIGIN_NM
+			, OUT_ATCH_CN
+			, OUT_ATCH_SIZE
+			, OUT_ATCH_EXIST
+			, OUT_FILE_NO
+			)
+			VALUES(
+			#{atchNo,jdbcType=NUMERIC}
+			, #{idx,jdbcType=NUMERIC}+1
+			, #{atch.outAtchDt,jdbcType=DATE}
+			, #{atch.outAtchAt,jdbcType=CHAR}
+			, #{atch.outStarCours,jdbcType=VARCHAR}
+			, #{atch.outAtchNm,jdbcType=VARCHAR}
+			, #{atch.outOriginNm,jdbcType=VARCHAR}
+			, #{atch.outAtchCn,jdbcType=CLOB}
+			, #{atch.outAtchSize,jdbcType=NUMERIC}
+			, #{atch.outAtchExist,jdbcType=VARCHAR}
+			, #{atch.outFileNo,jdbcType=NUMERIC}
+			)
+		</foreach>
+		SELECT * FROM DUAL
+	</insert>
+	<select id="selectAtchFileDetail" parameterType="kr.or.ddit.atch.vo.AtchFileDetailVO" resultType="kr.or.ddit.atch.vo.AtchFileDetailVO">
+		SELECT
+		    OUT_ATCH_CD
+		  , ATCH_NO
+		  , OUT_ATCH_DT
+		  , OUT_ATCH_AT
+		  , OUT_STAR_COURS
+		  , OUT_ATCH_NM
+		  , OUT_ORIGIN_NM
+		  , OUT_ATCH_CN
+		  , OUT_ATCH_SIZE
+		  , OUT_ATCH_EXIST
+		  , OUT_FILE_NO
+		FROM
+		    OUT_ATCH
+		WHERE ATCH_NO = #{atchNo} and OUT_ATCH_CD = #{outAtchCd} 
+	</select>
+</mapper>

@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.employee.dao.MypageMainDAO">
+	
+	<!-- 평일 -->
+	<select id="totalWeekday">
+		SELECT 
+		 count(*)
+		FROM (	SELECT 
+			               TO_CHAR(START_DT + LEVEL - 1, 'YYYY-MM-DD') DATES -- 날짜
+						  ,TO_CHAR (START_DT + LEVEL - 1, 'D') DAYS -- 요일
+					FROM (	SELECT 
+								TRUNC(SYSDATE,'MM') START_DT -- 이번달 시작 년월일
+								,TO_NUMBER(TO_CHAR(LAST_DAY(SYSDATE), 'DD')) END_DT -- 마지막 날짜 
+							FROM DUAL ) A
+					<![CDATA[
+						CONNECT BY LEVEL <= A.END_DT ) TM -- 마지막 날짜까지 반복
+					]]>
+					
+		WHERE TM.DAYS NOT IN ('1', '7') -- 일요일,토요일 제외
+		ORDER BY TM.DATES ASC
+	</select>
+	
+	<!-- 이번달 출근일 -->
+	<select id="totalAttendance" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+		SELECT
+		   count(*)
+		FROM
+		    ATTENDANCE
+		WHERE EMP_CD = #{empCd} AND TO_CHAR(ATTE_DATE,'YYYYMM') = TO_CHAR(SYSDATE,'YYYYMM')
+	</select>
+	
+	<!-- 초과근무 -->
+	<select id="selectOverTimeList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.attendance.vo.OverTimeVO">
+		SELECT ROWNUM RNUM, B.*
+		FROM(
+		    SELECT
+		        OVER.ATTE_NO
+		      , OVER.OVER_START
+		      , OVER.OVER_END
+		      , OVER.OVER_CONT
+		      , ATTEN.EMP_CD
+		      , ATTEN.ATTE_STIME
+		      , ATTEN.ATTE_END
+		      , ATTEN.ATTE_DATE
+		    FROM
+		        OVERTIME OVER
+		    INNER JOIN ATTENDANCE ATTEN ON(OVER.ATTE_NO = ATTEN.ATTE_NO)
+				WHERE ATTEN.EMP_CD=#{empCd} AND TO_CHAR(OVER_START,'YYYY-MM') = TO_CHAR(SYSDATE,'YYYY-MM')
+				  ORDER BY OVER_START DESC
+		)B
+	</select>
+	
+	<!-- 예정된 출장 -->
+	<select id="selectBusinessTriplist" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.businesstrip.vo.BusinessTripVO">
+		SELECT ROWNUM RNUM, B.*
+		FROM(
+		SELECT
+		    TRIP_NO
+		  , EMP_CD
+		  , TRIP_DATE
+		  , TRIP_PURPOSE
+		  , TRIP_PLACE
+		  , TRIP_SDATE
+		  , TRIP_EDATE
+		  , DOC_NO
+		FROM
+		    TRIP
+		WHERE EMP_CD =#{empCd}
+		AND TRIP_DATE>=SYSDATE
+		ORDER BY TRIP_DATE
+		)B
+	</select>
+	
+	<!-- 예정된 연가 -->
+	<select id="selectVacationList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.vocation.vo.VocationVO">
+		SELECT ROWNUM RNUM,B.*
+		FROM(
+		    SELECT
+		        VOCATION_CODE
+		      , EMP_CD
+		      , VOCATION_NO
+		      , VOCATION_SDAY
+		      , VOCATION_EDAY
+		      , VOCATION_ADDDATE
+		    FROM
+		        VOCATION
+		    WHERE EMP_CD = #{empCd}
+		    AND VOCATION_SDAY>=SYSDATE
+		    ORDER BY VOCATION_SDAY ASC
+		)B
+	</select>
+	
+	<!-- 내급여 5개월 -->
+	<select id="selectSalaryList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.salary.vo.SalaryDetailVO">
+		SELECT A.* 
+		FROM(
+		SELECT ROWNUM RNUM, B.*
+		    FROM(
+		    SELECT
+		        SAL_NO
+		      , EMP_CD
+		      , SUM(SAL_TOTAL) SAL_TOTAL
+		    FROM
+		        SALARY_DETAIL
+		    WHERE EMP_CD=#{empCd}
+		    GROUP BY EMP_CD, SAL_NO 
+		    ORDER BY SAL_NO DESC)B
+		)A
+		<![CDATA[
+		where  rnum >= 1 and rnum <= 5
+		]]>
+		ORDER BY RNUM DESC
+	</select>
+	
+	<!-- 수당5개월 -->
+	<select id="selectAllowList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.salary.vo.AllowHistoryVO">
+		SELECT A.* 
+		FROM(
+		SELECT ROWNUM RNUM, B.*
+		    FROM(
+		    SELECT
+		        SAL_NO
+		      , EMP_CD
+		      , SUM(ALLOW_AMT) ALLOW_AMT
+		    FROM
+		        ALLOW_HISTORY
+		    WHERE EMP_CD=#{empCd}
+		    GROUP BY EMP_CD, SAL_NO 
+		    ORDER BY SAL_NO DESC)B
+		)A
+		<![CDATA[
+		where  rnum >= 1 and rnum <= 5
+		]]>
+		ORDER BY RNUM DESC
+	</select>
+	
+	<!-- 공제5개월 -->
+	<select id="selectDdcList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.salary.vo.DdcHistoryVO">
+		SELECT A.* 
+		FROM(
+		SELECT ROWNUM RNUM, B.*
+		    FROM(
+		    SELECT
+		        SAL_NO
+		      , EMP_CD
+		      , SUM(DDC_AMT) DDC_AMT
+		    FROM
+		        DDC_HISTORY
+		    WHERE EMP_CD=#{empCd}
+		    GROUP BY EMP_CD, SAL_NO 
+		    ORDER BY SAL_NO DESC)B
+		)A
+		<![CDATA[
+		where  rnum >= 1 and rnum <= 5
+		]]>
+		ORDER BY RNUM DESC
+	</select>
+	
+	<!-- 예정된교육 -->
+	<select id="selectTrainingList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.training.vo.TrainingApplyVO">
+		SELECT ROWNUM RNUM, B.*
+		FROM(
+		SELECT
+		    TA.TRAIN_NO
+		  , TA.EMP_CD
+		  , TA.TA_DATE
+		  , TA.CODE
+		  , T.TRAIN_PLACE
+		  , T.TRAIN_TIME
+		  , T.TRAIN_TARGET
+		  , T.TRAIN_NAME
+		  , T.TRAIN_CONTENT
+		  , T.TRAIN_DATE -- 교육일자
+		  , L.LECTOR_NAME
+		FROM
+		    TRALINING_APPLICATION TA
+		INNER JOIN TRAINING T ON(TA.TRAIN_NO = T.TRAIN_NO)
+		INNER JOIN LECTOR L ON(T.LECTOR_ID = L.LECTOR_ID)
+		WHERE EMP_CD=#{empCd} AND TRAIN_DATE > SYSDATE 
+		ORDER BY TRAIN_DATE ASC
+		)B
+	</select>
+	
+	<!-- 결재한거 -->
+	<select id="selectDocumentList" parameterType="kr.or.ddit.employee.vo.EmployeeVO" resultType="kr.or.ddit.edDocument.vo.DocumentVO">
+		SELECT A.*
+		FROM(
+		    SELECT ROWNUM RNUM, B.*
+		        FROM(
+		        SELECT
+		            DOC_NO
+		          , EMP_CD
+		          , SIGNPATH_NO
+		          , DT_NO
+		          , DOC_TITLE
+		          , DOC_CONTENT
+		          , DOC_TYPE
+		          , DOC_UPDATEDATE
+		          , DOC_SIGN
+		          , CODE
+		          , ATCH_NO
+		        FROM
+		            DOCUMENT
+		        WHERE EMP_CD=#{empCd}
+		        ORDER BY TO_NUMBER(DOC_NO) DESC
+		    )B
+		)A
+		<![CDATA[
+		where  rnum >= 1 and rnum <= 5
+		]]>
+	</select>
+	
+</mapper>

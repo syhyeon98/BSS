@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.salary.dao.DdcDAO">
+	
+	<select id="selectDdcList">
+		SELECT DDC_CD, DDC_CRTR, DDC_NM
+		FROM DDC
+		ORDER BY DDC_CD ASC
+	</select>
+	
+	<select id="selectDdc" resultType="kr.or.ddit.salary.vo.DdcVO">
+		SELECT DDC_CD, DDC_CRTR, DDC_NM
+		FROM DDC
+		WHERE DDC_CD= #{ddcCd,jdbcType=CHAR}
+	</select>
+	
+	<insert id="insertDdc" parameterType="kr.or.ddit.salary.vo.DdcVO">
+		<selectKey order="BEFORE" keyProperty="ddcCd" resultType="string">
+			SELECT LPAD(NVL(MAX(DDC_CD), 0)+001,3,'0') 
+			FROM DDC
+		</selectKey>
+		INSERT INTO DDC(DDC_CD,DDC_NM,DDC_CRTR)
+		VALUES(
+			 #{ddcCd,jdbcType=CHAR}
+			,#{ddcNm,jdbcType=VARCHAR}
+			,#{ddcCrtr,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<delete id="deleteDdc" parameterType="string">
+		DELETE 
+		FROM DDC 
+		WHERE DDC_CD=#{ddcCd} 
+	</delete>
+	
+	<update id="updateDdc" parameterType="kr.or.ddit.salary.vo.DdcVO">
+		UPDATE DDC 
+		SET DDC_NM=#{ddcNm,jdbcType=VARCHAR} , DDC_CRTR=#{ddcCrtr,jdbcType=VARCHAR}
+		WHERE DDC_CD=#{ddcCd,jdbcType=CHAR}
+	</update>
+	
+</mapper>

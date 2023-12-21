@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+  <!-- leftMenu를 제외한 메인 템플릿  -->
+  <definition name="realParent" template="/WEB-INF/views/template/template.jsp">
+    <put-attribute name="title" value="BSS" />
+    <put-attribute name="preScript" value="/includee/preScript.jsp" />
+    <put-attribute name="headerMenu" value="/includee/headerMenu.jsp" />
+   
+    <put-attribute name="footer" value="/includee/footer.jsp" />
+    <put-attribute name="postScript" value="/includee/postScript.jsp" />
+  </definition>
+  
+   <!-- 로그인 화면에서 사용하는 템플릿 --> 
+  <definition name="loginTemplate" template="/WEB-INF/views/template/loginTemplate.jsp">
+    <put-attribute name="title" value="BSS" />
+    <put-attribute name="preScript" value="/includee/preScript.jsp" />
+   
+    <put-attribute name="footer" value="/includee/loginFooter.jsp" />
+    <put-attribute name="postScript" value="/includee/postScript.jsp" />
+  </definition>
+  
+<!--   관리자에서 권한 부여 -->
+  <definition name="adminTemplate" template="/WEB-INF/views/template/adminTemplate.jsp">
+    <put-attribute name="title" value="BSS" />
+    <put-attribute name="preScript" value="/includee/preScript.jsp" />
+   
+    <put-attribute name="footer" value="/includee/footer.jsp" />
+    <put-attribute name="postScript" value="/includee/postScript.jsp" />
+  </definition>
+  
+  <!-- 로그인 후 메인화면에서 사용하는 leftMenu -->
+  <definition name="mainParent" extends="realParent">
+    <put-attribute name="leftMenu" value="/includee/leftMenu.jsp" />
+  </definition>
+  
+  <!-- 인사관리 화면에서 사용하는 leftMenu  -->
+  <definition name="pmParent" extends="realParent">
+    <put-attribute name="leftMenu" value="/pmincludee/leftMenu.jsp" />
+  </definition>
+  
+  <!-- 전자결재 화면에서 사용하는 leftMenu  -->
+  <definition name="edParent" extends="realParent">
+    <put-attribute name="leftMenu" value="/edincludee/leftMenu.jsp" />
+  </definition>
+
+  <!-- 금융정보 화면에서 사용하는 leftMenu  -->
+  <definition name="finParent" extends="realParent">
+    <put-attribute name="leftMenu" value="/finincludee/leftMenu.jsp" />
+  </definition>
+ 
+  <!-- 메일 화면에서 사용하는 leftMenu  -->
+  <definition name="mailParent" extends="realParent">
+    <put-attribute name="leftMenu" value="/mailincludee/leftMenu.jsp" />
+  </definition>
+ 
+  <!-- 마이페이지 화면에서 사용하는 leftMenu  -->
+  <definition name="mypageParent" extends="realParent">
+    <put-attribute name="leftMenu" value="/myincludee/leftMenu.jsp" />
+  </definition>
+  
+  
+
+  <!-- login 화면 , login폴더 -->   
+  <definition name="login/*" extends="loginTemplate">
+    <put-attribute name="contentPage" value="/WEB-INF/views/login/{1}.jsp" />
+  </definition>
+  
+  <definition name="admin/*" extends="adminTemplate">
+    <put-attribute name="contentPage" value="/WEB-INF/views/admin/{1}.jsp" />
+  </definition>
+  
+  <!-- pm, 인사관리화면 폴더에 만들어진 jsp -->
+  <definition name="pm/*/*" extends="pmParent"> 
+    <put-attribute name="contentPage" value="/WEB-INF/views/pm/{1}/{2}.jsp" />
+  </definition>
+  
+  <!-- ed,전자결재 폴더에 만들어진 jsp -->
+  <definition name="ed/*/*" extends="edParent"> 
+    <put-attribute name="contentPage" value="/WEB-INF/views/ed/{1}/{2}.jsp" />
+  </definition>
+  
+  <!-- fin,금융 폴더에 만들어진 jsp -->
+  <definition name="fin/*/*" extends="finParent"> 
+    <put-attribute name="contentPage" value="/WEB-INF/views/fin/{1}/{2}.jsp" />
+  </definition>
+  
+  <!-- mail,메일 폴더에 만들어진 jsp -->
+  <definition name="mail/*/*" extends="mypageParent"> 
+    <put-attribute name="contentPage" value="/WEB-INF/views/mail/{1}/{2}.jsp" />
+  </definition>
+  
+  <!-- mypage,메일 폴더에 만들어진 jsp -->
+  <definition name="mypage/*" extends="mypageParent"> 
+    <put-attribute name="contentPage" value="/WEB-INF/views/mypage/{1}.jsp" />
+  </definition>
+
+  
+  <definition name="error/*" extends="loginTemplate">
+		<put-attribute name="contentPage" value="/WEB-INF/views/errors/{1}.jsp" />			
+	</definition>
+	
+  <!-- 메인 -->
+  <definition name="*/*" extends="mainParent"> 
+    <put-attribute name="contentPage" value="/WEB-INF/views/{1}/{2}.jsp" />
+  </definition>
+  
+  
+  
+</tiles-definitions>

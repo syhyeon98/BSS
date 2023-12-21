@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.BoardCompl.dao.OthersDAO">
+	<select id="selectEmpList" resultType="kr.or.ddit.BoardCompl.vo.EmpVO">
+		SELECT EMP_CD
+		     , EMP_NAME
+		     , DEP_CD
+		  FROM EMPLOYEE
+	</select>
+	<select id="selectDepList" resultType="kr.or.ddit.BoardCompl.vo.DepVO">
+		SELECT DEP_CD
+		     , DEP_NAME
+		  FROM DEPARTMENT
+<!-- 		  WHERE DEP_NAME NOT IN ('지점장','부지점장') -->
+	</select>
+</mapper>

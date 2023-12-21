@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.department.dao.DepartmentDAO">
+	<select id="depList" resultType="kr.or.ddit.department.vo.DepartmentVO">
+		select dep_cd, dep_name
+		from department
+	</select>
+
+	<insert id="insertDepartment" parameterType="kr.or.ddit.department.vo.DepartmentVO">
+		insert into department
+		(dep_cd, dep_name, dep_up, dep_num)
+		values
+		(
+		#{depCd,jdbcType=VARCHAR}
+		, #{depName,jdbcType=VARCHAR}
+		, #{depUp,jdbcType=VARCHAR}
+		, #{depNum,jdbcType=VARCHAR}
+		)
+	</insert>
+</mapper>

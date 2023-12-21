@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.finapi.dao.ApiDatabaseInsertDAO">
+
+	<!-- 은행 데이터 테이블 저장 -->
+	<insert id="bankInsert" parameterType="java.util.List">
+		<foreach collection="list" item="bank" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO BANK (
+					FIN_CO_NO
+					, KOR_CO_NM
+					, DCLS_MONTH
+					, DCLS_CHRG_MAN
+					, HOMP_URL
+					, CAL_TEL
+			) VALUES (
+					#{bank.finCoNo,jdbcType=VARCHAR}
+					,#{bank.korCoNm,jdbcType=VARCHAR}
+					,#{bank.dclsMonth,jdbcType=VARCHAR}
+					,#{bank.dclsChrgMan,jdbcType=VARCHAR}
+					,#{bank.hompUrl,jdbcType=CLOB}
+					,#{bank.calTel,jdbcType=VARCHAR}
+				)
+		</foreach>
+	</insert>
+	
+	<!-- 은행 옵션 데이터 테이블 저장 -->
+	<insert id="bankOptionInsert" parameterType="list">
+		<foreach collection="list" item="bankOption" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO BANK_OPTION (
+					AREA_CD, FIN_CO_NO, AREA_NM, EXIS_YN
+			) VALUES (
+					 #{bankOption.areaCd,jdbcType=VARCHAR}
+					,#{bankOption.finCoNo,jdbcType=VARCHAR}
+					,#{bankOption.areaNm,jdbcType=VARCHAR}
+					,#{bankOption.exisYn,jdbcType=CHAR}	
+				)
+		</foreach>
+	</insert>
+	
+	<!-- 정기예금 데이터 테이블 저장 -->
+	<insert id="depositInsert" parameterType="list">
+		<foreach collection="list" item="deposit" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO DEPOSIT (
+					FIN_PRDT_CD, DCLS_MONTH, FIN_CO_NO, FIN_PRDT_NM, JOIN_WAY, MTRT_INT, SPCL_CND, JOIN_DENY, ETC_NOTE, MAX_LIMIT, DCLS_STRT_DAY, DCLS_END_DAY, FIN_CO_SUBM_DAY, JOIN_MEMBER,TOP_FIN_GRP_NO
+			) VALUES (
+					 #{deposit.finPrdtCd,jdbcType=VARCHAR}
+					,#{deposit.dclsMonth,jdbcType=VARCHAR}
+					,#{deposit.finCoNo,jdbcType=VARCHAR}
+					,#{deposit.finPrdtNm,jdbcType=VARCHAR}
+					,#{deposit.joinWay,jdbcType=VARCHAR}
+					,#{deposit.mtrtInt,jdbcType=VARCHAR}
+					,#{deposit.spclCnd,jdbcType=VARCHAR}
+					,#{deposit.joinDeny,jdbcType=VARCHAR}
+					,#{deposit.etcNote,jdbcType=CLOB}
+					,#{deposit.maxLimit,jdbcType=NUMERIC}
+					,#{deposit.dclsStrtDay,jdbcType=VARCHAR}
+					,#{deposit.dclsEndDay,jdbcType=VARCHAR}
+					,#{deposit.finCoSubmDay,jdbcType=TIMESTAMP}
+					,#{deposit.joinMember,jdbcType=VARCHAR}
+					,'030300'
+			)
+		</foreach>
+	</insert>
+	
+	<!-- 정기예금 옵션 데이터 테이블 저장 -->
+	<insert id="depositOptionInsert" parameterType="list">
+		<foreach collection="list" item="depositOption" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO DEPOSIT_OPTION (
+					SAVE_TRM, FIN_PRDT_CD, DCLS_MONTH, FIN_CO_NO, INTR_RATE_TYPE, INTR_RATE_TYPE_NM, INTR_RATE, INTR_RATE2
+			) VALUES (
+					#{depositOption.saveTrm,jdbcType=NUMERIC}
+					,#{depositOption.finPrdtCd,jdbcType=VARCHAR}
+					,#{depositOption.dclsMonth,jdbcType=VARCHAR}
+					,#{depositOption.finCoNo,jdbcType=VARCHAR}
+					,#{depositOption.intrRateType,jdbcType=VARCHAR}
+					,#{depositOption.intrRateTypeNm,jdbcType=VARCHAR}
+					,#{depositOption.intrRate,jdbcType=NUMERIC}
+					,#{depositOption.intrRate2,jdbcType=NUMERIC}
+			)
+		</foreach>
+	</insert>
+	
+	<!-- 적금 데이터 테이블에 저장 -->
+	<insert id="savingPrdtInsert">
+		<foreach collection="list" item="savingPrdt" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO SAVING_PRDT (
+			    FIN_PRDT_CD
+			    ,DCLS_MONTH
+			    ,FIN_CO_NO
+			    ,FIN_PRDT_NM
+			    ,JOIN_WAY
+			    ,MTRT_INT
+			    ,SPCL_CND
+			    ,JOIN_DENY
+			    ,ETC_NOTE
+			    ,MAX_LIMIT
+			    ,DCLS_STRT_DAY
+			    ,DCLS_END_DAY
+			    ,FIN_CO_SUBM_DAY
+			    ,JOIN_MEMBER
+			    ,TOP_FIN_GRP_NO
+			) VALUES (
+			  #{savingPrdt.finPrdtCd,jdbcType=VARCHAR}
+			, #{savingPrdt.dclsMonth,jdbcType=VARCHAR}
+			, #{savingPrdt.finCoNo,jdbcType=VARCHAR}
+			, #{savingPrdt.finPrdtNm,jdbcType=VARCHAR}
+			, #{savingPrdt.joinWay,jdbcType=VARCHAR}
+			, #{savingPrdt.mtrtInt,jdbcType=CLOB}
+			, #{savingPrdt.spclCnd,jdbcType=VARCHAR}
+			, #{savingPrdt.joinDeny,jdbcType=VARCHAR}
+			, #{savingPrdt.etcNote,jdbcType=CLOB}
+			, #{savingPrdt.maxLimit,jdbcType=NUMERIC}
+			, #{savingPrdt.dclsStrtDay,jdbcType=VARCHAR}
+			, #{savingPrdt.dclsEndDay,jdbcType=VARCHAR}
+			, #{savingPrdt.finCoSubmDay,jdbcType=TIMESTAMP}
+			, #{savingPrdt.joinMember,jdbcType=VARCHAR}
+			,030300
+			)
+		</foreach>
+	</insert>
+	
+	
+	<!-- 정기예금 옵션 데이터 테이블 저장 -->
+	<insert id="savingPrdtOptionInsert" parameterType="list">
+		<foreach collection="list" item="savingPrdtOption" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+		INTO SAVING_PRDT_OPTION (
+		    SAVE_TRM
+		    , FIN_PRDT_CD
+		    , DCLS_MONTH
+		    , FIN_CO_NO
+		    , INTR_RATE_TYPE
+		    , INTR_RATE_TYPE_NM
+		    , INTR_RATE
+		    , INTR_RATE2
+		    , RSRV_TYPE_NM
+		    , RSRV_TYPE
+		) VALUES (
+		      #{savingPrdtOption.saveTrm,jdbcType=NUMERIC}
+		    , #{savingPrdtOption.finPrdtCd,jdbcType=VARCHAR}
+		    , #{savingPrdtOption.dclsMonth,jdbcType=VARCHAR}
+		    , #{savingPrdtOption.finCoNo,jdbcType=VARCHAR}
+		    , #{savingPrdtOption.intrRateType,jdbcType=VARCHAR}
+		    , #{savingPrdtOption.intrRateTypeNm,jdbcType=VARCHAR}
+		    , #{savingPrdtOption.intrRate,jdbcType=NUMERIC}
+		    , #{savingPrdtOption.intrRate2,jdbcType=NUMERIC}
+		    , #{savingPrdtOption.rsrvTypeNm,jdbcType=VARCHAR}    
+		    , #{savingPrdtOption.rsrvType,jdbcType=VARCHAR}
+		)
+		</foreach>
+	</insert>
+	
+	
+	
+	<!-- 주택담보대출 테이블에 저장 -->
+	<insert id="mortagageLoanInsert">
+		<foreach collection="list" item="mortagageLoan" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO MORTAGAGE_LOAN (
+			    FIN_PRDT_CD
+			    , DCLS_MONTH
+			    , FIN_CO_NO
+			    , FIN_PRDT_NM
+			    , JOIN_WAY
+			    , DCLS_STRT_DAY
+			    , DCLS_END_DAY
+			    , FIN_CO_SUBM_DAY
+			    , JOIN_MEMBER
+			    , LOAN_INCI_EXPN
+			    , ERLY_RPAY_FEE
+			    , DLY_RATE
+			    , LOAN_LMT
+			    , TOP_FIN_GRP_NO
+			) VALUES (
+			     #{mortagageLoan.finPrdtCd,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.dclsMonth,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.finCoNo,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.finPrdtNm,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.joinWay,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.dclsStrtDay,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.dclsEndDay,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.finCoSubmDay,jdbcType=TIMESTAMP}
+			    ,#{mortagageLoan.joinMember,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.loanInciExpn,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.erlyRpayFee,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.dlyRate,jdbcType=VARCHAR}
+			    ,#{mortagageLoan.loanLmt,jdbcType=VARCHAR}
+			    ,'020000'
+			)
+		</foreach>
+	</insert>
+	
+	
+	<!-- 주택담보대출 옵션 데이터 테이블 저장 -->
+	<insert id="mortagageLoanOptionInsert" parameterType="list">
+		<foreach collection="list" item="mortagageLoanOption" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO MORTAGAGE_LOAN_OPTION (
+			    MRTG_TYPE
+			    , RPAY_TYPE
+			    , LEND_RATE_TYPE
+			    , FIN_PRDT_CD
+			    , DCLS_MONTH
+			    , FIN_CO_NO
+			    , MRTG_TYPE_NM
+			    , RPAY_TYPE_NM
+			    , LEND_RATE_TYPE_NM
+			    , LEND_RATE_MIN
+			    , LEND_RATE_MAX
+			    , LEND_RATE_AVG
+			) VALUES (
+			     #{mortagageLoanOption.mrtgType,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.rpayType,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.lendRateType,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.finPrdtCd,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.dclsMonth,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.finCoNo,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.mrtgTypeNm,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.rpayTypeNm,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.lendRateTypeNm,jdbcType=VARCHAR}
+			    ,#{mortagageLoanOption.lendRateMin,jdbcType=NUMERIC}
+			    ,#{mortagageLoanOption.lendRateMax,jdbcType=NUMERIC}
+			    ,#{mortagageLoanOption.lendRateAvg,jdbcType=NUMERIC}
+			)
+		</foreach>
+	</insert>
+	
+	
+	<!-- 전세자금대출 테이블에 저장 -->
+	<insert id="rentHouseLoanInsert">
+		<foreach collection="list" item="rentHouseLoan" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO RENT_HOUSE_LOAN (
+			    FIN_PRDT_CD
+			    , DCLS_MONTH
+			    , FIN_CO_NO
+			    , FIN_PRDT_NM
+			    , JOIN_WAY
+			    , DCLS_STRT_DAY
+			    , DCLS_END_DAY
+			    , FIN_CO_SUBM_DAY
+			    , JOIN_MEMBER
+			    , LOAN_INCI_EXPN
+			    , ERLY_RPAY_FEE
+			    , DLY_RATE
+			    , LOAN_LMT
+			    , TOP_FIN_GRP_NO
+			) VALUES (
+			     #{rentHouseLoan.finPrdtCd,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.dclsMonth,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.finCoNo,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.finPrdtNm,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.joinWay,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.dclsStrtDay,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.dclsEndDay,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.finCoSubmDay,jdbcType=TIMESTAMP}
+			    ,#{rentHouseLoan.joinMember,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.loanInciExpn,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.erlyRpayFee,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.dlyRate,jdbcType=VARCHAR}
+			    ,#{rentHouseLoan.loanLmt,jdbcType=VARCHAR}
+			    ,'030300'
+			)
+		</foreach>
+	</insert>
+	
+	
+	<!-- 전세자금대출 옵션 데이터 테이블 저장 -->
+	<insert id="rentHouseLoanOptionInsert" parameterType="list">
+		<foreach collection="list" item="rentHouseLoanOption" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO RENT_HOUSE_LOAN_OPTION (
+			     RPAY_TYPE
+			    , LEND_RATE_TYPE
+			    , FIN_PRDT_CD
+			    , DCLS_MONTH
+			    , FIN_CO_NO
+			    , RPAY_TYPE_NM
+			    , LEND_RATE_TYPE_NM
+			    , LEND_RATE_MIN
+			    , LEND_RATE_MAX
+			    , LEND_RATE_AVG
+			) VALUES (
+			     #{rentHouseLoanOption.rpayType,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.lendRateType,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.finPrdtCd,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.dclsMonth,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.finCoNo,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.rpayTypeNm,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.lendRateTypeNm,jdbcType=VARCHAR}
+			    ,#{rentHouseLoanOption.lendRateMin,jdbcType=NUMERIC}
+			    ,#{rentHouseLoanOption.lendRateMax,jdbcType=NUMERIC}
+			    ,#{rentHouseLoanOption.lendRateAvg,jdbcType=NUMERIC}
+			)
+		</foreach>
+	</insert>
+	
+	<!-- 개인신용대출 테이블에 저장 -->
+	<insert id="creditLoanInsert">
+		<foreach collection="list" item="creditLoan" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO CREDIT_LOAN (
+			    FIN_PRDT_CD
+			    , DCLS_MONTH
+			    , CRDT_PRDT_TYPE
+			    , FIN_CO_NO
+			    , FIN_PRDT_NM
+			    , CRDT_PRDT_TYPE_NM
+			    , JOIN_WAY
+			    , DCLS_STRT_DAY
+			    , DCLS_END_DAY
+			    , FIN_CO_SUBM_DAY
+			    , TOP_FIN_GRP_NO
+			    , CB_NAME
+			) VALUES (
+				 #{creditLoan.finPrdtCd,jdbcType=VARCHAR}
+				,#{creditLoan.dclsMonth,jdbcType=VARCHAR}
+				,#{creditLoan.crdtPrdtType,jdbcType=VARCHAR}
+				,#{creditLoan.finCoNo,jdbcType=VARCHAR}
+				,#{creditLoan.finPrdtNm,jdbcType=VARCHAR}
+				,#{creditLoan.crdtPrdtTypeNm,jdbcType=VARCHAR}
+				,#{creditLoan.joinWay,jdbcType=VARCHAR}
+				,#{creditLoan.dclsStrtDay,jdbcType=VARCHAR}
+				,#{creditLoan.dclsEndDay,jdbcType=VARCHAR}
+				,#{creditLoan.finCoSubmDay,jdbcType=TIMESTAMP}
+				,'020000'
+				,#{creditLoan.cbName,jdbcType=VARCHAR}
+			)
+		</foreach>
+	</insert>
+	
+	
+	<!-- 개인신용대출 옵션 데이터 테이블 저장 -->
+	<insert id="creditLoanOptionInsert" parameterType="list">
+		<foreach collection="list" item="creditLoanOption" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO CREDIT_LOAN_OPTION (
+			    CRDT_LEND_RATE_TYPE
+			    , FIN_PRDT_CD
+			    , DCLS_MONTH
+			    , CRDT_PRDT_TYPE
+			    , FIN_CO_NO
+			    , CRDT_LEND_RATE_TYPE_NM
+			    , CRDT_GRAD_1
+			    , CRDT_GRAD_4
+			    , CRDT_GRAD_5
+			    , CRDT_GRAD_6
+			    , CRDT_GRAD_10
+			    , CRDT_GRAD_11
+			    , CRDT_GRAD_12
+			    , CRDT_GRAD_13
+			    , CRDT_GRAD_AVG
+			) VALUES (
+				 #{creditLoanOption.crdtLendRateType,jdbcType=VARCHAR}
+				,#{creditLoanOption.finPrdtCd,jdbcType=VARCHAR}
+				,#{creditLoanOption.dclsMonth,jdbcType=VARCHAR}
+				,#{creditLoanOption.crdtPrdtType,jdbcType=VARCHAR}
+				,#{creditLoanOption.finCoNo,jdbcType=VARCHAR}
+				,#{creditLoanOption.crdtLendRateTypeNm,jdbcType=VARCHAR}
+				,#{creditLoanOption.crdtGrad1,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad4,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad5,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad6,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad10,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad11,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad12,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGrad13,jdbcType=NUMERIC}
+				,#{creditLoanOption.crdtGradAvg,jdbcType=NUMERIC}
+			)
+		</foreach>
+	</insert>
+	
+	<!-- 경영은행 테이블에 저장 -->
+	<insert id="manageBankInsert">
+		<foreach collection="list" item="manageBank" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO MANAGE_BANK (
+			   	 FINANCE_CD
+			    , FINANCE_NM
+			) VALUES (
+			    #{manageBank.financeCd,jdbcType=VARCHAR}
+			   ,#{manageBank.financeNm,jdbcType=VARCHAR}
+		    )
+		</foreach>
+	</insert>
+	
+	<!-- 통계목록 테이블에 저장 -->
+	<insert id="statisticInsert">
+		<foreach collection="list" item="statistic" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO STATISTIC (
+			    LIST_NO
+			    , LIST_NM
+			    , LRG_DIV_NM
+			    , SML_DIV_NM
+			) VALUES (
+			 #{statistic.listNo,jdbcType=VARCHAR}
+			,#{statistic.listNm,jdbcType=VARCHAR}
+			,#{statistic.lrgDivNm,jdbcType=VARCHAR}
+			,#{statistic.smlDivNm,jdbcType=VARCHAR}
+			)
+		</foreach>
+	</insert>
+	
+	<!-- 통계목록 테이블에 저장 -->
+	<insert id="accountInsert">
+		<foreach collection="list" item="account" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			INTO ACCOUNT (
+			    ACCOUNT_CD
+			    , ACCOUNT_NM
+			    , LIST_NO
+			    , LIST_NM
+			) VALUES (
+			     #{account.accountCd,jdbcType=VARCHAR}
+				,#{account.accountNm,jdbcType=VARCHAR}
+				,#{account.listNo,jdbcType=VARCHAR}
+				,#{account.listNm,jdbcType=VARCHAR}
+			)
+		</foreach>
+	</insert>
+
+	<!-- 통계정보 테이블에 저장 -->
+	<insert id="statisticInfoInsert" parameterType="kr.or.ddit.finapi.vo.StatisticsInfoVO">
+<!-- 		INSERT INTO STATISTICS_INFO ( -->
+<!-- 			     FINANCE_CD -->
+<!-- 			    , BASE_MONTH -->
+<!-- 			    , ACCOUNT_CD -->
+<!-- 			    , FINANCE_NM -->
+<!-- 			    , ACCOUNT_NM -->
+<!-- 			    , A -->
+<!-- 			    , B -->
+<!-- 			    , C -->
+<!-- 			    , D -->
+<!-- 			    , E -->
+<!-- 			) VALUES ( -->
+<!-- 			 	 #{financeCd,jdbcType=VARCHAR}  -->
+<!-- 				,#{baseMonth,jdbcType=VARCHAR} -->
+<!-- 				,#{accountCd,jdbcType=VARCHAR} -->
+<!-- 				,#{financeNm,jdbcType=VARCHAR} -->
+<!-- 				,#{accountNm,jdbcType=VARCHAR} -->
+<!-- 				,#{a,jdbcType=VARCHAR} -->
+<!-- 				,#{b,jdbcType=VARCHAR} -->
+<!-- 				,#{c,jdbcType=VARCHAR} -->
+<!-- 				,#{d,jdbcType=VARCHAR} -->
+<!-- 				,#{e,jdbcType=VARCHAR} -->
+<!-- 			) -->
+		MERGE
+		INTO
+			STATISTICS_INFO tgt
+			USING dual
+		ON
+			(tgt.FINANCE_CD =  #{financeCd ,jdbcType=VARCHAR}
+				AND tgt.BASE_MONTH = #{baseMonth ,jdbcType=VARCHAR}
+				AND tgt.ACCOUNT_CD = #{accountCd ,jdbcType=VARCHAR}
+				AND tgt.ACCOUNT_NM = #{accountNm ,jdbcType=VARCHAR }
+				)
+		WHEN MATCHED THEN
+		UPDATE
+		SET
+			tgt.FINANCE_NM = #{financeNm,jdbcType=VARCHAR},
+			tgt.A = #{a,jdbcType=VARCHAR},
+			tgt.B = #{b,jdbcType=VARCHAR},
+			tgt.C = #{c,jdbcType=VARCHAR},
+			tgt.D = #{d,jdbcType=VARCHAR},
+			tgt.E = #{e,jdbcType=VARCHAR}
+		WHEN NOT MATCHED THEN
+		INSERT
+			(
+			      FINANCE_CD
+			    , BASE_MONTH
+			    , ACCOUNT_CD
+			    , FINANCE_NM
+			    , ACCOUNT_NM
+			    , A
+			    , B
+			    , C
+			    , D
+			    , E
+			) VALUES (
+				 #{financeCd,jdbcType=VARCHAR}
+				,#{baseMonth,jdbcType=VARCHAR}
+				,#{accountCd,jdbcType=VARCHAR}
+				,#{financeNm,jdbcType=VARCHAR}
+				,#{accountNm,jdbcType=VARCHAR}
+				,#{a,jdbcType=VARCHAR}
+				,#{b,jdbcType=VARCHAR}
+				,#{c,jdbcType=VARCHAR}
+				,#{d,jdbcType=VARCHAR}
+				,#{e,jdbcType=VARCHAR}
+			)
+	</insert>
+	
+	<insert id="statisticInfoDescriptionInsert">
+		INSERT INTO description (
+		      COLUMN_ID
+		    , FINANCE_CD
+		    , BASE_MONTH
+		    , ACCOUNT_CD
+		    , ACCOUNT_NM
+		    , COLUMN_NM
+		) VALUES (
+		  #{columnId,jdbcType=VARCHAR}
+		, #{financeCd,jdbcType=VARCHAR}
+		, #{baseMonth,jdbcType=VARCHAR}
+		, #{accountCd,jdbcType=VARCHAR}
+		, #{accountNm,jdbcType=VARCHAR}
+		, #{columnNm,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+</mapper>

@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.employee.dao.EmployeeDAO">
+	
+	<resultMap type="kr.or.ddit.employee.vo.EmployeeVO" id="employee" autoMapping="true">
+		<id property="empCd" column="EMP_CD"/>
+		<association property="department" autoMapping="true"/>
+		<association property="position" autoMapping="true" />
+		<association property="business" autoMapping="true"/>
+		<association property="uniersity" autoMapping="true"/>
+		<association property="fileDetail" autoMapping="true"/>
+		<collection property="careerList" ofType="kr.or.ddit.career.vo.CareerVO" autoMapping="true"/>
+		<collection property="licenseList" ofType="kr.or.ddit.license.vo.LicenseVO" autoMapping="true"/>
+	</resultMap>
+	
+	<select id="selectEmployeeForAuth" parameterType="String"
+		resultMap="employee" >
+		SELECT EMP.EMP_CD, EMP.DEP_CD, PO_CD
+		, BUS_CD, EMP_PW, EMP_MAIL
+		,ENP_START, EMP_NAME, DEP_NAME
+		, SUBSTR(TO_CHAR(DEP_NUM), 1, 3) || '-' ||
+  				  SUBSTR(TO_CHAR(DEP_NUM), 4, 3) || '-' ||
+                  SUBSTR(TO_CHAR(DEP_NUM), 7, 4) AS DEP_NUM
+        , EMP_ID1, EMP_ADD, EMP_ADD1, EMP_ADD2, EMP_PROFILE
+        , EMP_HP, EMP_RESIGNATION, EMP_MARRY, EMP_MILITARY
+        , EMP_ROLE
+        , LICENSE_NM, LICENSE_DATE, LICENSE_AGENCY
+        , (SELECT PO_NAME
+            FROM POSITION P
+            WHERE EMP.PO_CD = P.PO_CD) AS PO_NAME
+        , (SELECT BUS_NAME
+            FROM BUSINESS B
+            WHERE EMP.BUS_CD = B.BUS_CD) AS BUS_NAME
+        , (SELECT RE_DATE 
+            FROM RESIGNATION RE
+            WHERE EMP.EMP_CD = RE.EMP_CD) AS RE_DATE
+		, UNI_NAME, UNI_MAJOR, UNI_DEGREE
+        , (SELECT STATE_NM 
+            FROM STATE S 
+            WHERE UNI.CODE = S.CODE) AS STATE_NM
+		, FAM_NO, FAM_NAME, FAM_JOB, FAM_BIR, FAM_EDU, FAM_NOTE
+        , FAM_CLASSIFY
+        , (SELECT STATE_NM
+            FROM STATE S 
+            WHERE FAM.CODE = S.CODE ) AS CODE
+        , OUT_ORIGIN_NM
+        , OUT_ATCH_NM
+		FROM EMPLOYEE EMP 
+        INNER JOIN DEPARTMENT DEPT ON( EMP.DEP_CD=DEPT.DEP_CD)
+        LEFT OUTER JOIN LICENSE LI ON(EMP.EMP_CD = LI.EMP_CD)
+        LEFT OUTER JOIN UNIVERSITY UNI ON (EMP.EMP_CD = UNI.EMP_CD)
+        LEFT OUTER JOIN FAMILY FAM ON(EMP.EMP_CD = FAM.EMP_CD)
+        LEFT OUTER JOIN OUT_ATCH OA ON(EMP.ATCH_NO = OA.ATCH_NO)
+		WHERE EMP.EMP_CD = #{empCd}
+	</select>
+
+	<!-- 직원사번 또는 직원명으로 검색 -->
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'empName'">
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'empCd'">
+						INSTR(EMP_CD, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'empDept'">
+						INSTR(DEP_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'empPo'">
+						INSTR(PO_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(EMP_CD, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(DEP_NAME, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(PO_NAME, #{simpleCondition.searchWord} ) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM EMPLOYEE
+		<include refid="searchFrag" />
+	</select>
+
+<!-- 		resultType="kr.or.ddit.employee.vo.EmployeeVO" -->
+	<select id="selectEmpList"
+		resultMap="employee"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM(
+			SELECT ROWNUM RNUM, A.*
+		FROM
+		(
+			with emp as (
+				SELECT
+				EMP_CD
+				, EMP_NAME, E.DEP_CD, PO_CD
+				, EMP_MAIL
+				, SUBSTR(TO_CHAR(DEP_NUM), 1, 3) || '-' ||
+  				  SUBSTR(TO_CHAR(DEP_NUM), 4, 3) || '-' ||
+                  SUBSTR(TO_CHAR(DEP_NUM), 7, 4) AS DEP_NUM
+				, DEP_NAME
+			FROM EMPLOYEE E LEFT OUTER JOIN DEPARTMENT D ON (E.DEP_CD = D.DEP_CD)
+			where emp_resignation = 'N'	
+			)
+			select emp.*, PO_NAME
+				from emp left outer join position p on (emp.PO_CD =	P.PO_CD)
+				order by EMP_CD asc
+			)A
+			<include refid="searchFrag" />
+		)B
+		<![CDATA[
+		where rnum >= #{startRow} and rnum <= #{endRow}
+		]]>
+	</select>
+
+<!-- 	<select id="empDetail" resultType="EmployeeVO" -->
+	<select id="empDetail" resultMap="employee"
+		parameterType="string">
+SELECT
+        E.ATCH_NO,
+        E.EMP_CD, E.DEP_CD, E.PO_CD, E.BUS_CD, EMP_PW
+		, EMP_ID1, EMP_ID2, EMP_HP, EMP_MAIL
+		, EMP_ADD, EMP_ADD1, EMP_ADD2, EMP_MARRY, EMP_MILITARY
+		, EMP_RESIGNATION, ENP_START, EMP_BANK, EMP_PROFILE
+        , UNI_NAME, UNI_MAJOR, UNI_DEGREE, UNI_START, UNI_END, UNI.CODE "uni.code"
+        , EMP_NAME, RE_DATE, RE.CODE AS RCODE, RE_TREATMENT
+        , DEP_NAME
+        , SUBSTR(TO_CHAR(DEP_NUM), 1, 3) || '-' ||
+  				  SUBSTR(TO_CHAR(DEP_NUM), 4, 3) || '-' ||
+                  SUBSTR(TO_CHAR(DEP_NUM), 7, 4) AS DEP_NUM
+        , PO_NAME
+        , LICENSE_NM, LICENSE_DATE, LICENSE_AGENCY
+        , CAR_NM, CAR_PO, CAR_DATE
+        , BUS_NAME
+        , STATE_NM
+        , ATCH_DT, ATCH_AT
+        , OUT_ORIGIN_NM, OUT_STAR_COURS
+        , OUT_ATCH_NM
+        FROM EMPLOYEE E
+        LEFT OUTER JOIN RESIGNATION RE ON(E.EMP_CD = RE.EMP_CD)
+        LEFT OUTER JOIN UNIVERSITY UNI ON (E.EMP_CD = UNI.EMP_CD)
+        LEFT OUTER JOIN DEPARTMENT DEP ON (E.DEP_CD = DEP.DEP_CD)
+        LEFT OUTER JOIN POSITION PO ON(E.PO_CD = PO.PO_CD)
+        LEFT OUTER JOIN LICENSE LI ON(E.EMP_CD = LI.EMP_CD)
+        LEFT OUTER JOIN CAREER CAR ON(E.EMP_CD = CAR.EMP_CD)
+        LEFT OUTER JOIN BUSINESS BUS ON(E.BUS_CD = BUS.BUS_CD)
+        LEFT OUTER JOIN STATE S ON(UNI.CODE = S.CODE)
+        LEFT OUTER JOIN ATCH AT ON(E.ATCH_NO = AT.ATCH_NO)
+        LEFT OUTER JOIN OUT_ATCH OAT ON(AT.ATCH_NO = OAT.ATCH_NO)
+        WHERE E.EMP_CD = #{empCd}
+	</select>
+
+	<insert id="insertEmployee" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+	<selectKey order="BEFORE" keyProperty="empCd"  resultType="string">
+		SELECT TO_CHAR(SYSDATE, 'YYMM') || LPAD(TO_NUMBER(MAX(SUBSTR(emp_cd,5))) + 1, 3, '0')
+		FROM EMPLOYEE
+	</selectKey>
+		insert into
+		EMPLOYEE
+		(EMP_CD
+		, DEP_CD
+		, PO_CD
+		, BUS_CD
+		, EMP_PW
+		, EMP_ID1
+		, EMP_ID2
+		, EMP_HP
+		, EMP_MAIL
+		, EMP_ADD
+		, EMP_ADD1
+		, EMP_ADD2
+		, EMP_MARRY
+		, EMP_MILITARY
+		, ENP_START
+		, EMP_BANK
+		, EMP_NAME
+		, EMP_RESIGNATION
+		, EMP_PROFILE
+		, ATCH_NO
+		
+		)
+		values(
+			#{empCd,jdbcType=VARCHAR}
+			, #{depCd,jdbcType=CHAR}
+			, #{poCd,jdbcType=CHAR}
+			, #{busCd,jdbcType=CHAR}
+			, #{empPw,jdbcType=VARCHAR}
+			, #{empId1,jdbcType=NUMERIC}
+			, #{empId2,jdbcType=NUMERIC}
+			, #{empHp,jdbcType=VARCHAR}
+			, #{empMail,jdbcType=VARCHAR}
+			, #{empAdd,jdbcType=VARCHAR}
+			, #{empAdd1,jdbcType=VARCHAR}
+			, #{empAdd2,jdbcType=VARCHAR}
+			, #{empMarry,jdbcType=CHAR}
+			, #{empMilitary,jdbcType=CHAR}
+			, #{enpStart,jdbcType=DATE}
+			, #{empBank,jdbcType=VARCHAR}
+			, #{empName,jdbcType=VARCHAR}
+			, 'N'
+			, #{empProfile,jdbcType=NUMERIC}
+			, #{atchNo,jdbcType=NUMERIC}
+		)
+	</insert>
+	
+	
+	<update id="updateEmployee" parameterType="kr.or.ddit.employee.vo.EmployeeVO">
+		update employee
+		set 
+		emp_name = #{empName,jdbcType=VARCHAR}
+		, emp_hp = #{empHp,jdbcType=VARCHAR}
+		, emp_mail = #{empMail}
+		, emp_add = #{empAdd,jdbcType=VARCHAR}
+		, emp_add1 = #{empAdd1,jdbcType=VARCHAR}
+		, emp_add2 = #{empAdd2,jdbcType=VARCHAR}
+		where emp_cd = #{empCd,jdbcType=VARCHAR}
+	</update>
+	
+	<select id="empListNotPaging" resultMap="employee" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*
+		FROM(
+			SELECT ROWNUM RNUM, A.*
+		FROM
+		(
+			with emp as (
+				SELECT
+				EMP_CD
+				, EMP_NAME, E.DEP_CD, PO_CD
+				, EMP_MAIL
+				, SUBSTR(TO_CHAR(DEP_NUM), 1, 3) || '-' ||
+  				  SUBSTR(TO_CHAR(DEP_NUM), 4, 3) || '-' ||
+                  SUBSTR(TO_CHAR(DEP_NUM), 7, 4) AS DEP_NUM
+				, DEP_NAME
+			FROM EMPLOYEE E LEFT OUTER JOIN DEPARTMENT D ON (E.DEP_CD = D.DEP_CD)
+			where emp_resignation = 'N'	
+			)
+			select emp.*, PO_NAME
+				from emp left outer join position p on (emp.PO_CD =	P.PO_CD)
+				ORDER BY EMP_NAME ASC
+			)A
+			<include refid="searchFrag" />
+		)B
+	</select>
+	
+	<select id="myBoard" resultType="kr.or.ddit.employee.vo.MyBoardVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT 
+		COMPL_NO, COMPL_EMP_CD, COMPL_TTL, COMPL_CN, COMPL_DT
+		, NTC_NO, NTC_TTL, NTC_CN, NTC_DT
+		, REQ_NO, REQ_TTL, REQ_CN, REQ_DT, REQ_PW, REQ_CHECK
+		FROM REQ_BOARD RB
+		LEFT OUTER JOIN NTC_BOARD NB ON(NB.EMP_CD = RB.EMP_CD)
+		LEFT OUTER JOIN COMPL_BOARD CB ON(RB.EMP_CD = CB.EMP_CD)
+		WHERE RB.EMP_CD = #{empCd}
+	</select>
+	
+	<update id="updateEmployeeReg" parameterType="int">
+		update employee
+		set 
+		EMP_RESIGNATION = 'Y'
+		where EMP_CD = #{empCd}
+	</update>
+	
+	<select id="empRoleList" resultType="EmployeeVO">
+		SELECT 
+			EMP_CD, EMP_NAME, EMP_ROLE, DEP_NAME
+		FROM
+			EMPLOYEE E
+            LEFT OUTER JOIN DEPARTMENT D ON(E.DEP_CD = D.DEP_CD)
+		WHERE EMP_ROLE IS NULL
+	</select>
+	<update id="roleUpdate" parameterType="EmployeeVO">
+		UPDATE EMPLOYEE
+		SET 
+		EMP_ROLE = #{empRole}
+		WHERE EMP_CD = #{empCd}
+	</update>
+	
+</mapper>

@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.finapi.dao.MortagageLoanDAO">
+
+	<select id="selectOptionMrtgTypeList" resultType="kr.or.ddit.finapi.vo.MortagageLoanOptionVO">
+		SELECT DISTINCT MRTG_TYPE, MRTG_TYPE_NM FROM MORTAGAGE_LOAN_OPTION
+	</select>
+	
+	<select id="selectOptionLendRateTypeList" resultType="kr.or.ddit.finapi.vo.MortagageLoanOptionVO">
+		SELECT DISTINCT LEND_RATE_TYPE, LEND_RATE_TYPE_NM FROM MORTAGAGE_LOAN_OPTION
+	</select>
+
+	
+		<sql id="searchFrag">
+		<where>
+			<choose>
+				<when
+					test="detailCondition.areaCd neq null and not detailCondition.areaCd.isEmpty()">
+					B.KOR_CO_NM IN (
+					SELECT KOR_CO_NM
+					FROM BANK B
+					INNER JOIN BANK_OPTION BO ON (B.FIN_CO_NO = BO.FIN_CO_NO)
+					<if
+						test="detailCondition.areaCd neq null and not detailCondition.areaCd.isEmpty()">
+						<foreach collection="detailCondition.areaCd" index="idx"
+							item="areaCd" separator="OR" open="WHERE">
+							AREA_CD = #{areaCd}
+						</foreach>
+						AND EXIS_YN='Y'
+					</if>
+					)
+				</when>
+				<otherwise>
+					B.KOR_CO_NM IN (
+					SELECT KOR_CO_NM
+					FROM BANK B
+					INNER JOIN BANK_OPTION BO ON (B.FIN_CO_NO = BO.FIN_CO_NO))
+				</otherwise>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.mrtgType neq null and not detailCondition.mrtgType.isEmpty()">
+					AND MRTG_TYPE=#{detailCondition.mrtgType}
+				</when>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.topFinGrpNo neq null and not detailCondition.topFinGrpNo.isEmpty()">
+					AND TOP_FIN_GRP_NO=#{detailCondition.topFinGrpNo}
+				</when>
+			</choose>
+			<choose>
+				<when test="detailCondition.rpayType neq null and not detailCondition.rpayType.isEmpty()">
+					AND RPAY_TYPE=#{detailCondition.rpayType}
+				</when>
+			</choose>
+			<choose>
+				<when
+					test="detailCondition.lendRateType neq null and not detailCondition.lendRateType.isEmpty()">
+					AND LEND_RATE_TYPE=#{detailCondition.lendRateType}
+				</when>
+			</choose>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'korCoNm'">
+						AND INSTR(KOR_CO_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'finPrdtNm'">
+						AND INSTR(FIN_PRDT_NM,#{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						AND (INSTR(KOR_CO_NM, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(FIN_PRDT_NM, #{simpleCondition.searchWord} ) > 0)
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+	
+	<select id="selectTotalRecord"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo" resultType="long">
+		SELECT COUNT(*)
+		FROM BANK B
+		INNER JOIN mortagage_loan ML
+			ON(B.FIN_CO_NO=ML.FIN_CO_NO)
+		INNER JOIN mortagage_loan_OPTION MLO 
+			ON(ML.FIN_PRDT_CD = MLO.FIN_PRDT_CD AND ML.DCLS_MONTH = MLO.DCLS_MONTH AND ML.FIN_CO_NO = MLO.FIN_CO_NO)
+		<include refid="searchFrag" />
+	</select>
+	
+	<select id="selectMortagageLoanList"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo"
+		resultType="kr.or.ddit.finapi.vo.MortagageLoanVO">
+		SELECT C.*
+			FROM (
+			    SELECT ROWNUM RNUM
+			    	       ,A.FIN_CO_NO
+			               ,A.KOR_CO_NM
+			               ,A.DCLS_MONTH
+			               ,A.DCLS_CHRG_MAN 
+			               ,A.HOMP_URL 
+			               ,A.CAL_TEL
+			               ,A.FIN_PRDT_CD 
+			               ,A.FIN_PRDT_NM 
+			               ,A.JOIN_WAY
+			               ,A.DCLS_STRT_DAY 
+			               ,A.DCLS_END_DAY
+			               ,A.FIN_CO_SUBM_DAY 
+			               ,A.LOAN_INCI_EXPN
+			               ,A.TOP_FIN_GRP_NO
+		                   ,A.ERLY_RPAY_FEE
+		                   ,A.DLY_RATE
+		                   ,A.LOAN_LMT
+			               ,A.MRTG_TYPE
+			               ,A.RPAY_TYPE
+			               ,A.LEND_RATE_TYPE
+		                   ,A.MRTG_TYPE_NM
+		                   ,A.RPAY_TYPE_NM
+		                   ,A.LEND_RATE_TYPE_NM
+		                   ,A.LEND_RATE_MIN
+		                   ,A.LEND_RATE_MAX
+		                   ,A.LEND_RATE_AVG
+			    FROM (
+			        SELECT B.FIN_CO_NO
+			               ,B.KOR_CO_NM
+			               ,B.DCLS_MONTH
+			               ,B.DCLS_CHRG_MAN 
+			               ,B.HOMP_URL 
+			               ,B.CAL_TEL
+			               ,ML.FIN_PRDT_CD 
+			               ,ML.FIN_PRDT_NM 
+			               ,ML.JOIN_WAY
+			               ,ML.DCLS_STRT_DAY 
+			               ,ML.DCLS_END_DAY
+			               ,ML.FIN_CO_SUBM_DAY 
+			               ,ML.LOAN_INCI_EXPN
+			               ,ML.TOP_FIN_GRP_NO
+		                   ,ML.ERLY_RPAY_FEE
+		                   ,ML.DLY_RATE
+		                   ,ML.LOAN_LMT
+			               ,MLO.MRTG_TYPE
+			               ,MLO.RPAY_TYPE
+			               ,MLO.LEND_RATE_TYPE
+		                   ,MLO.MRTG_TYPE_NM
+		                   ,MLO.RPAY_TYPE_NM
+		                   ,MLO.LEND_RATE_TYPE_NM
+		                   ,MLO.LEND_RATE_MIN
+		                   ,MLO.LEND_RATE_MAX
+		                   ,MLO.LEND_RATE_AVG
+				FROM BANK B
+				INNER JOIN MORTAGAGE_LOAN ML ON (B.FIN_CO_NO = ML.FIN_CO_NO)
+				INNER JOIN MORTAGAGE_LOAN_OPTION MLO ON (ML.FIN_PRDT_CD = MLO.FIN_PRDT_CD AND ML.DCLS_MONTH = MLO.DCLS_MONTH AND ML.FIN_CO_NO = MLO.FIN_CO_NO)
+				<include refid="searchFrag" />
+				ORDER BY TOP_FIN_GRP_NO ASC, LEND_RATE_AVG DESC
+				) A
+				) C
+				<![CDATA[  
+					WHERE RNUM >=#{startRow}  AND RNUM <=#{endRow} 
+				]]>
+	</select>
+	
+	<select id="selectMortagageLoan" parameterType="kr.or.ddit.finapi.vo.MortagageLoanVO" resultType="kr.or.ddit.finapi.vo.MortagageLoanVO">
+		SELECT 
+			B.FIN_CO_NO
+	               ,B.KOR_CO_NM
+	               ,B.DCLS_MONTH
+	               ,B.DCLS_CHRG_MAN 
+	               ,B.HOMP_URL 
+	               ,B.CAL_TEL
+	               ,ML.FIN_PRDT_CD 
+	               ,ML.FIN_PRDT_NM 
+	               ,ML.JOIN_WAY
+	               ,ML.DCLS_STRT_DAY 
+	               ,ML.DCLS_END_DAY
+	               ,ML.FIN_CO_SUBM_DAY 
+	               ,ML.LOAN_INCI_EXPN
+	               ,ML.TOP_FIN_GRP_NO
+                   ,ML.ERLY_RPAY_FEE
+                   ,ML.DLY_RATE
+                   ,ML.LOAN_LMT
+	               ,MLO.MRTG_TYPE
+	               ,MLO.RPAY_TYPE
+	               ,MLO.LEND_RATE_TYPE
+                   ,MLO.MRTG_TYPE_NM
+                   ,MLO.RPAY_TYPE_NM
+                   ,MLO.LEND_RATE_TYPE_NM
+                   ,MLO.LEND_RATE_MIN
+                   ,MLO.LEND_RATE_MAX
+                   ,MLO.LEND_RATE_AVG
+		FROM MORTAGAGE_LOAN ML
+		INNER JOIN MORTAGAGE_LOAN_OPTION MLO
+			ON(ML.FIN_PRDT_CD = MLO.FIN_PRDT_CD AND ML.DCLS_MONTH=MLO.DCLS_MONTH AND ML.FIN_CO_NO=MLO.FIN_CO_NO)
+		INNER JOIN BANK B 
+			ON(ML.FIN_CO_NO=B.FIN_CO_NO)
+		WHERE ML.FIN_PRDT_CD  = #{finPrdtCd}
+        		AND ML.FIN_CO_NO=#{finCoNo}
+        		AND MRTG_TYPE=#{mrtgType}
+                AND RPAY_TYPE=#{rpayType}
+                AND LEND_RATE_TYPE=#{lendRateType}
+	</select>
+
+</mapper>

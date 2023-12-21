@@ -1,0 +1,358 @@
+package kr.or.ddit.mail.service;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.text.MessageFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.inject.Inject;
+import javax.mail.Authenticator;
+import javax.mail.BodyPart;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMessage.RecipientType;
+import javax.mail.internet.MimeMultipart;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import kr.or.ddit.atch.service.AtchFileService;
+import kr.or.ddit.atch.vo.AtchFileDetailVO;
+import kr.or.ddit.atch.vo.AtchFileVO;
+import kr.or.ddit.exception.PKNotFoundException;
+import kr.or.ddit.mail.dao.MailBoxDAO;
+import kr.or.ddit.mail.vo.MailBoxVO;
+import kr.or.ddit.pagingVO.PaginationInfo;
+
+@Service
+public class MailBoxServiceImpl implements MailBoxService {
+	@Inject
+	private MailBoxDAO mailBoxDAO;
+	@Inject
+	private AtchFileService atchService;
+	@Value("#{appInfo.atchMailPath}")
+	private Resource atchMailPath;
+
+	@Override
+	public String recieveMailList(String empId) {
+		String empMail = mailBoxDAO.selectMail(empId);
+		String mailToken = mailBoxDAO.getMailToken(empId);
+
+		String username = empMail;
+		String password = mailToken;
+		String host = "imap.gmail.com";
+		int port = 993;
+
+		Properties props = new Properties();
+
+		props.put("mail.imaps.host", host);
+		props.put("mail.imaps.port", port);
+		props.put("mail.imaps.starttls.enable", true);
+
+		Session session = Session.getDefaultInstance(props);
+
+		try {
+			Store store = session.getStore("imaps");
+			store.connect(host, username, password);
+
+			Folder folder = store.getFolder("INBOX");
+			folder.open(Folder.READ_ONLY);
+
+			Message[] messages = folder.getMessages();
+
+			for (Message msg : messages) {
+				MailBoxVO mailBox = new MailBoxVO();
+				Date sentDate = msg.getSentDate();
+				String subject = msg.getSubject();
+				Object content = msg.getContent();
+				String from = ((InternetAddress) msg.getFrom()[0]).toUnicodeString();
+
+				mailBox.setReceiveMailReceiver(username);
+				mailBox.setEmpCd(empId);
+				mailBox.setReceiveMailSender(from);
+				mailBox.setReceiveMailTitle(subject);
+				mailBox.setReceiveMailContent((String) content);
+				LocalDate localDate = sentDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+				mailBox.setReceiveMailDate(localDate);
+
+				//mailBoxDAO.insertMail(mailBox);
+			}
+			folder.close(false);
+			store.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return "mail/allMail/allMailList";
+	}
+
+	@Override
+	public boolean sendMail(MailBoxVO mail, String empCd) {
+		MultipartFile[] mailFiles = mail.getMailFiles();
+		final String UPLOAD_DIR = "D:\\mail";
+		List<String> mailPathList = new ArrayList();
+		List<AtchFileDetailVO> detailList = new ArrayList<>();
+
+		for (MultipartFile mailFile : mailFiles) {
+			if (mailFile.isEmpty())
+				continue;
+			detailList.add(new AtchFileDetailVO(mailFile));
+
+			String originalFilename = mailFile.getOriginalFilename();
+
+			String filePath = UPLOAD_DIR + File.separator + originalFilename;
+			
+			mailPathList.add(filePath);
+			
+	         try {
+	            Files.copy(mailFile.getInputStream(), Path.of(filePath), StandardCopyOption.REPLACE_EXISTING);
+	             //mailPathList.add(filePath);
+	          } catch (IOException e) {
+	             e.printStackTrace();
+	          }
+		}
+
+		String empMail = mailBoxDAO.selectMail(empCd);
+		String mailToken = mailBoxDAO.getMailToken(empCd);
+
+		String to = mail.getReceiveMailReceiver();
+		String from = empMail;
+
+		final String username = empMail;
+		final String passwoard = mailToken;
+		final String host = "smtp.gmail.com";
+
+		Properties props = new Properties();
+
+		props.put("mail.smtp.auth", true);
+		props.put("mail.smtp.host", host);
+		props.put("mail.smtp.port", 587);
+		props.put("mail.smtp.starttls.enable", true);
+		props.put("mail.smtp.ssl.trust", host);
+
+		Session session = Session.getInstance(props, new Authenticator() {
+			@Override
+			protected PasswordAuthentication getPasswordAuthentication() {
+				return new PasswordAuthentication(username, passwoard);
+			}
+		});
+
+		if (detailList.size() > 0) {
+			try {
+				AtchFileVO fileGroup = new AtchFileVO();
+				fileGroup.setDetailList(detailList);
+
+//				try {
+//					int atchNo = atchService.createAtchFileGroup(fileGroup, atchMailPath);
+//					mail.setAtchNo(atchNo);
+//				} catch (IOException e) {
+//					throw new RuntimeException(e);
+//				}
+				mail.setEmpCd(empCd);
+				mailBoxDAO.sendMail(mail);
+
+				Message message = new MimeMessage(session);
+				message.setFrom(new InternetAddress(from));
+				message.setRecipients(RecipientType.TO, InternetAddress.parse(to));
+
+				BodyPart textBodyPart = new MimeBodyPart();
+				
+
+				 
+				message.setSubject(mail.getReceiveMailTitle());
+				textBodyPart.setText(mail.getReceiveMailContent());
+
+				Multipart multipart = new MimeMultipart();
+				multipart.addBodyPart(textBodyPart);
+
+				BodyPart fileBodyPart = new MimeBodyPart();
+
+				String filePath = mailPathList.get(0);
+
+				DataSource dataSource = new FileDataSource(filePath);
+				DataHandler handler = new DataHandler(dataSource);
+
+				fileBodyPart.setDataHandler(handler);
+				fileBodyPart.setFileName(handler.getName());
+				multipart.addBodyPart(fileBodyPart);
+
+				message.setContent(multipart);
+
+				Transport.send(message);
+			} catch (MessagingException e) {
+				MessageFormat.format("{0} 해당 이메일 없음", to);
+				e.printStackTrace();
+				return false;
+			}
+		} else {
+			try {
+				Message message = new MimeMessage(session);
+				message.setFrom(new InternetAddress(from));
+				message.setRecipients(RecipientType.TO, InternetAddress.parse(to));
+
+				message.setSubject(mail.getReceiveMailTitle());
+				message.setText(mail.getReceiveMailContent());
+
+				// 메시지 전송
+				Transport.send(message);
+
+				mail.setEmpCd(empCd);
+				mailBoxDAO.sendMail(mail);
+			} catch (MessagingException e) {
+				MessageFormat.format("{0} 해당 이메일 없음", to);
+				e.printStackTrace();
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	@Override
+	public List<MailBoxVO> allMail(String empCd, PaginationInfo paging) {
+		paging.setEmpCd(empCd);
+		
+		long totalRecord =mailBoxDAO.selectTotalRecord(paging);
+		paging.setTotalRecord(totalRecord);
+		
+		return mailBoxDAO.selectAllMail(paging);
+	}
+
+	@Override
+	public List<MailBoxVO> retriveSendMailList(String empId, PaginationInfo paging) {
+		long totalRecord = mailBoxDAO.selectTotalRecord(paging);
+		paging.setTotalRecord(totalRecord);
+
+		String empMail = mailBoxDAO.selectMail(empId);
+		paging.setEmpMail(empMail);
+		
+		return mailBoxDAO.selectSendMailList(paging);
+	}
+
+	@Override
+	public List<MailBoxVO> retriveGetMailList(String empCd, PaginationInfo paging) {
+		long totalRecord = mailBoxDAO.selectTotalRecord(paging);
+		paging.setTotalRecord(totalRecord);
+
+		String empMail = mailBoxDAO.selectMail(empCd);
+		paging.setEmpMail(empMail);
+
+		return mailBoxDAO.selectReciveMailList(paging);
+	}
+
+	@Override
+	public MailBoxVO retriveMailDetail(String mailNo) {
+		MailBoxVO mail = mailBoxDAO.selectMailDetail(mailNo);
+		if (mail == null)
+			throw new PKNotFoundException(MessageFormat.format("{1}에 해당하는 메일 없음.", mailNo));
+		return mail;
+	}
+
+	@Override
+	public List<MailBoxVO> tempMailList(String empMail, PaginationInfo paging) {
+		long totalRecord = mailBoxDAO.selectTotalRecord(paging);
+		paging.setTotalRecord(totalRecord);
+		
+		paging.setEmpMail(empMail);
+		
+		return mailBoxDAO.selectTempMailList(paging);
+	}
+
+	@Override
+	public boolean temporaryMail(MailBoxVO mail, String empCd) {
+		mail.setEmpCd(empCd);
+		int cnt = mailBoxDAO.mailStorageInfo(mail);
+		return cnt > 0;
+	}
+
+	@Override
+	public void deleteTempMail(String mailNo) {
+		mailBoxDAO.sendTempMail(mailNo);
+	}
+
+	@Override
+	public List<MailBoxVO> toMeList(String empCd, PaginationInfo paging) {
+		long totalRecord = mailBoxDAO.selectTotalRecord(paging);
+		paging.setTotalRecord(totalRecord);
+		
+		paging.setEmpCd(empCd);
+		
+		return mailBoxDAO.selectToMeList(paging);
+	}
+
+	@Override
+	public boolean deleteMail(MailBoxVO mailBox) {
+		int cnt = mailBoxDAO.mailWaste(mailBox);
+		return cnt > 0;
+	}
+
+	@Override
+	public List<MailBoxVO> wasteMailList(MailBoxVO mailBox, PaginationInfo paging) {
+		long totalRecord = mailBoxDAO.selectTotalRecord(paging);
+		String loginEmpCd = mailBox.getLoginEmpCd();
+		String loginEmpMail = mailBox.getLoginEmpMail();
+		
+		paging.setLoginEmpCd(loginEmpCd);
+		paging.setLoginEmpMail(loginEmpMail);
+		paging.setTotalRecord(totalRecord);
+		
+		return mailBoxDAO.selectWasteMailList(paging);
+	}
+
+	@Override
+	public void removeMail(MailBoxVO mailBox) {
+		mailBoxDAO.deleteWasteMail(mailBox);
+	}
+
+	@Override
+	public void restoreMail(MailBoxVO mailBox) {
+		mailBoxDAO.restoreWasteMail(mailBox);
+	}
+
+	@Override
+	public void impoMail(MailBoxVO mailBox) {
+
+		mailBoxDAO.impoSetMail(mailBox);
+	}
+
+	@Override
+	public List<MailBoxVO> impoMailList(String empMail, PaginationInfo paging) {
+		long totalRecord = mailBoxDAO.selectTotalRecord(paging);
+		paging.setTotalRecord(totalRecord);
+		
+		paging.setEmpMail(empMail);
+		
+		return mailBoxDAO.selectImpoList(paging);
+	}
+
+	@Override
+	public String mailSenderEmpCd(String mailNo) {
+		return mailBoxDAO.mailSenderEmpCd(mailNo);
+	}
+}

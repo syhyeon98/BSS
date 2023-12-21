@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.edApproval.dao.ApprovalDao">
+
+	<sql id="searchFrag">
+		<where>
+			<if
+				test="simpleCondition neq null and simpleCondition.searchWord neq null and not simpleCondition.searchWord.isEmpty()">
+				<choose>
+					<when test="simpleCondition.searchType eq 'empName'">
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'depName'">
+						INSTR(DEP_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<when test="simpleCondition.searchType eq 'poName'">
+						INSTR(PO_NAME, #{simpleCondition.searchWord} ) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NAME, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(DEP_NAME, #{simpleCondition.searchWord} ) > 0
+						OR
+						INSTR(PO_NAME, #{simpleCondition.searchWord} ) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</where>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="long"
+		parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM EMPLOYEE EMP
+			INNER JOIN DEPARTMENT DEP ON(EMP.DEP_CD = DEP.DEP_CD)
+		    INNER JOIN POSITION POS ON (EMP.PO_CD = POS.PO_CD)
+		<include refid="searchFrag" />
+	</select>
+	
+	<!-- 조직도 팬시트리 / 부서를 조회하며 그에 따른 사원 조회이므로 Dep으로 resultMap 생성, dep가 emp를 has many -->
+	<resultMap type="kr.or.ddit.department.vo.DepartmentVO" id="depList" autoMapping="true">
+		<id property="depCd" column="DEP_CD"/>
+		<collection property="empList" ofType="kr.or.ddit.employee.vo.EmployeeVO" autoMapping="true"/>
+	</resultMap>
+	<select id="selectEmpList" resultMap="depList">
+		       WITH EMPVIEW AS (
+           SELECT A.*, ROWNUM DEP_RNUM 
+           FROM (
+               SELECT DEP_UP, DEP_CD, DEP_NAME         
+                   , (SELECT COUNT(*) FROM EMPLOYEE EMP WHERE DEP.DEP_CD = EMP.DEP_CD) EMP_COUNT
+               FROM DEPARTMENT DEP
+               ORDER BY EMP_COUNT DESC
+           ) A
+       )
+       SELECT EMPVIEW.DEP_UP, EMPVIEW.DEP_CD, EMPVIEW.DEP_NAME, EMPVIEW.DEP_RNUM, EMP_COUNT
+           , EMP.EMP_CD, POS.PO_CD, EMP.EMP_NAME || ' ' || POS.PO_NAME AS EMP_POSITION
+       FROM EMPVIEW
+       LEFT OUTER JOIN EMPLOYEE EMP ON (EMPVIEW.DEP_CD = EMP.DEP_CD)
+       LEFT OUTER JOIN POSITION POS ON (EMP.PO_CD = POS.PO_CD)
+      ORDER BY DEP_CD, PO_CD
+<!-- 		WITH EMPVIEW AS ( -->
+<!-- 	        SELECT A.*, ROWNUM DEP_RNUM  -->
+<!-- 	        FROM ( -->
+<!-- 	            SELECT DEP_UP, DEP_CD, DEP_NAME          -->
+<!-- 	                , (SELECT COUNT(*) FROM EMPLOYEE EMP WHERE DEP.DEP_CD = EMP.DEP_CD) EMP_COUNT -->
+<!-- 	            FROM DEPARTMENT DEP -->
+<!-- 	            ORDER BY EMP_COUNT DESC -->
+<!-- 	        ) A -->
+<!-- 	    ) -->
+<!-- 	    SELECT EMPVIEW.DEP_UP, EMPVIEW.DEP_CD, EMPVIEW.DEP_NAME, EMPVIEW.DEP_RNUM, EMP_COUNT -->
+<!-- 	        , EMP.EMP_CD, EMP.EMP_NAME || ' ' || POS.PO_NAME AS EMP_POSITION -->
+<!-- 	    FROM EMPVIEW -->
+<!-- 	    LEFT OUTER JOIN EMPLOYEE EMP ON (EMPVIEW.DEP_CD = EMP.DEP_CD) -->
+<!-- 	    LEFT OUTER JOIN POSITION POS ON (EMP.PO_CD = POS.PO_CD) -->
+<!-- 		ORDER BY DEP_CD  -->
+	</select>
+	
+	
+<!-- 	
+	    <where>
+			<if test="_parameter neq null and startRow gt 0">
+				DEP_RNUM BETWEEN #{startRow} AND #{endRow} 
+			</if>
+		</where>
+ -->
+
+<!-- 검색 시 -->
+<!-- 
+ 	<select id="selectEmpList" resultType="kr.or.ddit.employee.vo.EmployeeVO"> 
+		SELECT EMP.EMP_CD, EMP.EMP_NAME
+		     , EMP.DEP_CD, DEP.DEP_NAME
+		     , EMP.PO_CD, POS.PO_NAME
+		FROM EMPLOYEE EMP
+		    INNER JOIN DEPARTMENT DEP ON(EMP.DEP_CD = DEP.DEP_CD)
+		    INNER JOIN POSITION POS ON (EMP.PO_CD = POS.PO_CD)
+		    <include refid="searchFrag" />
+	</select>
+-->
+</mapper>
+
+
+
+
+
+
+
+
+

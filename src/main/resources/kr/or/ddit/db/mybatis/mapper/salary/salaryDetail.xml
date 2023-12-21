@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.salary.dao.SalaryDetailDAO">
+	
+	<resultMap type="kr.or.ddit.salary.vo.SalaryDetailVO" id="salaryDetail" autoMapping="true" >
+		<id property="empCd" column="EMP_CD" />
+		<id property="salNo" column="SAL_NO" />
+		<association property="employeeVO" javaType="kr.or.ddit.employee.vo.EmployeeVO" autoMapping="true">
+				<association property="department" autoMapping="true"/>
+				<association property="position" autoMapping="true" />
+				<association property="business" autoMapping="true"/>
+				<association property="uniersity" autoMapping="true"/>
+				<collection property="careerList" ofType="kr.or.ddit.career.vo.CareerVO" autoMapping="true"/>
+				<collection property="licenseList" ofType="kr.or.ddit.license.vo.LicenseVO" autoMapping="true"/>
+		</association>
+		<association property="salaryVO" javaType="kr.or.ddit.salary.vo.SalaryVO" autoMapping="true"/>
+	</resultMap>
+
+	
+	<select id="selectSalaryDetailList" parameterType="kr.or.ddit.salary.vo.SalaryDetailVO" resultMap="salaryDetail">
+		SELECT SD.SAL_NO,SD.EMP_CD, EMP_NAME,SAL_TOTAL ,SAL_CLCLN_YMD,SAL_CALC_START,SAL_CALC_END,SAL_CALC_YN, BUS_NAME , PO_NAME,GIVE_YMD
+		FROM SALARY_DETAIL SD
+		INNER JOIN EMPLOYEE E
+		ON (SD.EMP_CD = E.EMP_CD)
+		INNER JOIN SALARY S
+		ON(SD.SAL_NO = S.SAL_NO AND SD.EMP_CD=S.EMP_CD)
+        INNER JOIN BUSINESS B
+        ON(E.BUS_CD = B.BUS_CD)
+        INNER JOIN POSITION P
+        ON(E.PO_CD = P.PO_CD)
+		WHERE 1=1
+		<if test="salNo!=null and salNo!=0">
+			AND SD.SAL_NO=#{salNo}
+		</if>
+		<if test="employeeVO != null and employeeVO.empName!=null and !employeeVO.empName.isEmpty()">
+			AND INSTR(EMP_NAME,#{employeeVO.empName})>0
+		</if>
+		<if test="employeeVO != null and employeeVO.empCd!=null and !employeeVO.empCd.isEmpty()">
+			AND SD.EMP_CD=#{employeeVO.empCd}
+		</if>
+		ORDER BY SD.EMP_CD DESC
+	</select>
+	
+	
+<!-- 	<insert id="insertSalaryDetail"> -->
+		
+<!-- 		INSERT INTO SALARY_DETAIL (SAL_NO,EMP_CD,SAL_TOTAL,SAL_CLCLN_YMD) -->
+<!-- 		WITH ALLOWTOTAL AS( -->
+<!-- 		SELECT SAL_NO, EMP_CD ,SUM(ALLOW_AMT) AS "ALLOW_TOTAL"  -->
+<!-- 		FROM ALLOW_HISTORY WHERE SAL_NO=#{salNo} -->
+<!-- 		GROUP BY EMP_CD,SAL_NO) -->
+<!-- 		,DDCTOTAL AS( -->
+<!-- 		SELECT SAL_NO, EMP_CD ,SUM(DDC_AMT) AS "DDC_TOTAL"  -->
+<!-- 		FROM DDC_HISTORY WHERE SAL_NO=#{salNo} -->
+<!-- 		GROUP BY SAL_NO, EMP_CD) -->
+<!-- 		SELECT AT.SAL_NO, AT.EMP_CD, (ALLOW_TOTAL-DDC_TOTAL)"SAL_TOTAL",SYSDATE FROM ALLOWTOTAL AT INNER JOIN DDCTOTAL DT ON (AT.SAL_NO = DT.SAL_NO  AND AT.EMP_CD = DT.EMP_CD) -->
+<!-- 		ORDER BY EMP_CD -->
+		
+<!-- 	</insert> -->
+	<insert id="insertSalaryDetail">
+		
+		INSERT INTO SALARY_DETAIL (SAL_NO,EMP_CD,SAL_TOTAL,SAL_CLCLN_YMD)
+		WITH ALLOWTOTAL AS(
+		SELECT SAL_NO, EMP_CD ,SUM(ALLOW_AMT) AS "ALLOW_TOTAL" 
+		FROM ALLOW_HISTORY WHERE SAL_NO=TO_CHAR(SYSDATE,'YYYYMM')
+		GROUP BY EMP_CD,SAL_NO)
+		,DDCTOTAL AS(
+		SELECT SAL_NO, EMP_CD ,SUM(DDC_AMT) AS "DDC_TOTAL" 
+		FROM DDC_HISTORY WHERE SAL_NO=TO_CHAR(SYSDATE,'YYYYMM')
+		GROUP BY SAL_NO, EMP_CD)
+		SELECT AT.SAL_NO, AT.EMP_CD, (ALLOW_TOTAL-DDC_TOTAL)"SAL_TOTAL",SYSDATE FROM ALLOWTOTAL AT INNER JOIN DDCTOTAL DT ON (AT.SAL_NO = DT.SAL_NO  AND AT.EMP_CD = DT.EMP_CD)
+		ORDER BY EMP_CD
+		
+	</insert>
+<!-- 	<insert id="insertSalaryDetail"> -->
+		
+<!-- 		INSERT INTO SALARY_DETAIL (SAL_NO,EMP_CD,SAL_TOTAL,SAL_CLCLN_YMD) -->
+<!-- 		WITH ALLOWTOTAL AS( -->
+<!-- 		SELECT SAL_NO, EMP_CD ,SUM(ALLOW_AMT) AS "ALLOW_TOTAL"  -->
+<!-- 		FROM ALLOW_HISTORY WHERE SAL_NO='202307' -->
+<!-- 		GROUP BY EMP_CD,SAL_NO) -->
+<!-- 		,DDCTOTAL AS( -->
+<!-- 		SELECT SAL_NO, EMP_CD ,SUM(DDC_AMT) AS "DDC_TOTAL"  -->
+<!-- 		FROM DDC_HISTORY WHERE SAL_NO='202307' -->
+<!-- 		GROUP BY SAL_NO, EMP_CD) -->
+<!-- 		SELECT AT.SAL_NO, AT.EMP_CD, (ALLOW_TOTAL-DDC_TOTAL)"SAL_TOTAL",SYSDATE FROM ALLOWTOTAL AT INNER JOIN DDCTOTAL DT ON (AT.SAL_NO = DT.SAL_NO  AND AT.EMP_CD = DT.EMP_CD) -->
+<!-- 		ORDER BY EMP_CD -->
+		
+<!-- 	</insert> -->
+	
+	<delete id="deleteSalaryDetail" parameterType="kr.or.ddit.salary.vo.SalaryVO">
+		DELETE SALARY_DETAIL
+		WHERE SAL_NO=#{salNo}
+	</delete>
+	
+	<update id="updateSalaryGiveYmd" parameterType="kr.or.ddit.salary.vo.SalaryVO">
+		UPDATE SALARY_DETAIL
+		SET GIVE_YMD=SYSDATE
+		WHERE SAL_NO=#{salNo}
+	</update>
+
+</mapper>

@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.training.dao.TrainingApplyDAO">
+	
+	<!-- 교육 신청자 전체조회 페이징을 위해 레코드 수 조회  -->
+	<select id="selectTotalRecord" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) 
+		FROM TRALINING_APPLICATION
+		WHERE CODE = 'L_01'
+	</select>
+ 
+	<!-- 교육 신청자 전체조회   -->
+	<select id="selectTrainApplyAll" resultType="kr.or.ddit.training.vo.TrainingApplyVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		WITH ALIST AS(
+		    SELECT 
+		        ROW_NUMBER() OVER (ORDER BY TRAIN_PERIOD DESC) AS RNUM
+		        ,T.TRAIN_NO
+		        , TRAIN_NAME
+		        , TA_DATE
+		        , TA.EMP_CD
+		        , EMP_NAME
+		        , DEP_NAME
+		        , TRAIN_PERIOD
+		    FROM TRALINING_APPLICATION TA
+		        INNER JOIN TRAINING T ON T.TRAIN_NO = TA.TRAIN_NO
+		        INNER JOIN EMPLOYEE E ON E.EMP_CD = TA.EMP_CD
+		        INNER JOIN DEPARTMENT D ON E.DEP_CD = D.DEP_CD
+		    WHERE TA.CODE='L_01'
+		    ORDER BY TRAIN_PERIOD DESC, DEP_NAME ASC
+		)
+		SELECT ALIST.*
+		FROM ALIST
+		<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<!-- 교육별 신청자 조회(모달) 페이징 -->
+	<select id="totalRecordForTrainApply" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) 
+		FROM TRALINING_APPLICATION
+		WHERE TRAIN_NO = #{trainNo,jdbcType=NUMERIC}	
+	</select>
+	
+	<!-- 교육별 신청자 조회(모달) 리스트 -->
+	<select id="selectTrainApply" resultType="kr.or.ddit.training.vo.TrainingApplyVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		WITH ALIST AS(
+		    SELECT 
+		        ROW_NUMBER() OVER (ORDER BY TRAIN_PERIOD DESC) AS RNUM
+		        ,T.TRAIN_NO
+		        , TRAIN_NAME
+		        , TA_DATE
+		        , TA.EMP_CD
+		        , EMP_NAME
+		        , DEP_NAME
+		        , TRAIN_PERIOD
+		    FROM TRALINING_APPLICATION TA
+		        INNER JOIN TRAINING T ON T.TRAIN_NO = TA.TRAIN_NO
+		        INNER JOIN EMPLOYEE E ON E.EMP_CD = TA.EMP_CD
+		        INNER JOIN DEPARTMENT D ON E.DEP_CD = D.DEP_CD
+		    WHERE TA.CODE='L_01' AND TA.TRAIN_NO = #{trainNo,jdbcType=NUMERIC}
+		    ORDER BY TRAIN_PERIOD DESC, DEP_NAME ASC
+		)
+		SELECT ALIST.*
+		FROM ALIST
+		<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<!-- [마이페이지] 교육 내역 조회 페이징-->
+	<select id="totalRecordForMyTrain" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*)
+		FROM TRAINING T
+			LEFT OUTER JOIN LECTOR L ON(T.LECTOR_ID = L.LECTOR_ID)
+            INNER JOIN TRALINING_APPLICATION TA ON (T.TRAIN_NO = TA.TRAIN_NO)
+        WHERE TA.EMP_CD = #{empCd,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- [마이페이지] 교육 내역 조회 리스트 -->
+	<select id="selectMyTrain" resultType="kr.or.ddit.training.vo.TrainingVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT A.*,
+			<![CDATA[
+			CASE WHEN SYSDATE < TRAIN_DATE THEN '신청' ELSE '완료' END AS appCheck
+			]]>
+		FROM (
+		    SELECT ROW_NUMBER() OVER (ORDER BY TRAIN_DATE DESC) AS RNUM,
+		           TA.EMP_CD,
+		           T.TRAIN_NO,
+		           T.TRAIN_NAME,
+		           T.LECTOR_ID,
+		           L.LECTOR_NAME,
+		           T.TRAIN_DATE,
+		           T.TRAIN_TIME,
+		           T.TRAIN_PLACE,
+		           T.TRAIN_PERIOD,
+		           TA.TA_DATE,
+		           T.TRAIN_TARGET,
+		           T.TRAIN_CONTENT,
+		           T.CODE
+		    FROM TRAINING T
+		    LEFT OUTER JOIN LECTOR L ON(T.LECTOR_ID = L.LECTOR_ID)
+		    INNER JOIN TRALINING_APPLICATION TA ON (T.TRAIN_NO = TA.TRAIN_NO)
+		    WHERE TA.EMP_CD = #{empCd,jdbcType=VARCHAR}
+		    ORDER BY TRAIN_DATE DESC
+		) A
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	
+	<!-- 로그인한 사람의 특정교육에 대한 신청값이 있는지 조회 -->
+	<select id="selectHaveApply" resultType="kr.or.ddit.training.vo.TrainingApplyVO">
+	SELECT
+	    TRAIN_NO
+	  , EMP_CD
+	  , TA_DATE
+	  , CODE
+	FROM TRALINING_APPLICATION
+	WHERE TRAIN_NO = #{trainNo,jdbcType=NUMERIC} AND EMP_CD = #{empCd,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 교육 신청하기  -->
+	<insert id="insertTrainApply" parameterType="kr.or.ddit.training.vo.TrainingApplyVO">
+		INSERT INTO TRALINING_APPLICATION(
+			TRAIN_NO
+			,EMP_CD
+			,TA_DATE
+			,CODE
+		) VALUES (
+			#{trainNo,jdbcType=NUMERIC}
+		  , #{empCd,jdbcType=VARCHAR}
+		  , SYSDATE
+		  , 'L_01'
+		)
+	</insert>
+	
+	<!-- 교육 취소하기  -->
+	<!--	
+	<update id="updateTrainApply" parameterType="kr.or.ddit.training.vo.TrainingApplyVO">
+	UPDATE TRALINING_APPLICATION
+		SET
+			CODE = 'L_02'
+	WHERE EMP_CD = #{empCd,jdbcType=VARCHAR}
+	</update>
+	-->
+	<update id="deleteTrainApply" parameterType="kr.or.ddit.training.vo.TrainingApplyVO">
+	DELETE TRALINING_APPLICATION
+	WHERE TRAIN_NO = #{trainNo,jdbcType=NUMERIC} AND EMP_CD = #{empCd,jdbcType=VARCHAR}	
+	</update>
+	
+
+	<!-- 페이징을 위해 레코드 수 조회 : [메인 > 기타업무 > 교육신청] 마감기한이 지나지 않은 직원교육 전체조회  -->
+	<select id="selectTotalRecordforTrainList" resultType="long" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT COUNT(*) FROM TRAINING
+		WHERE TRAIN_PERIOD >= TRUNC(SYSDATE)
+	</select>
+	
+	<!-- [메인 > 기타업무 > 교육신청] 마감기한이 지나지 않은 직원교육 전체조회  -->
+	<select id="selectTrainList" resultType="kr.or.ddit.training.vo.TrainingVO" parameterType="kr.or.ddit.pagingVO.PaginationInfo">
+		SELECT B.*, A.ApplyCount
+		FROM (
+		   SELECT A.*
+		    FROM (
+		        SELECT ROW_NUMBER() OVER (ORDER BY TRAIN_PERIOD DESC) AS RNUM,
+		            TRAIN_NO
+		            , LECTOR_ID
+		            , TRAIN_PLACE
+		            , TRAIN_TIME
+		            , TRAIN_DATE
+		            , TRAIN_TARGET
+		            , TRAIN_NAME
+		            , TRAIN_CONTENT
+		            , TRAIN_PERIOD
+		            , TRAIN_SIGN
+		            , CAPACITY
+		        FROM TRAINING
+                WHERE TRAIN_PERIOD >= TRUNC(SYSDATE)
+		    ) A
+            ORDER BY TRAIN_PERIOD DESC
+		) B 
+		LEFT JOIN (
+		    SELECT
+		        TRAIN_NO,
+		        COUNT(*) AS applyCount
+		    FROM TRALINING_APPLICATION
+		    GROUP BY TRAIN_NO
+		) A ON (B.TRAIN_NO = A.TRAIN_NO)
+		<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	<!-- 교육 신청자 1명 조회  -->
+	
+</mapper>
